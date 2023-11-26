@@ -2,7 +2,7 @@ const { Router } = require("express");
 
 const router = Router();
 const path = require("path");
-const { readFileSync } = require("node:fs");
+const { readFileSync } = require("fs");
 
 router.get("^/$|/index(.html)?", (req, res) => {
   const filepath = path.join(__dirname, "..", "index.html");

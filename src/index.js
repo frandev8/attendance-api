@@ -4,9 +4,9 @@ const corsOptions = require("../conf/allowOrigins");
 const cookieParser = require("cookie-parser");
 const connectDB = require("../conf/dbConn");
 const mongoose = require("mongoose");
-const { readFileSync } = require("node:fs");
+const { readFileSync } = require("fs");
 const cron = require("node-cron");
-const path = require("node:path");
+const path = require("path");
 const {
   markAttendanceAbsent,
   clockOutAttendance,

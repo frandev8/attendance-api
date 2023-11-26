@@ -7,7 +7,7 @@ const {
 } = require("../models/adminDB");
 const mongoose = require("mongoose");
 require("mongoose-sequence")(mongoose);
-const { randomBytes } = require("node:crypto");
+const { randomBytes } = require("crypto");
 const tokenDB = require("../models/tokenDB");
 const adminVerifyDB = require("../models/verifyAdminLoginDB");
 const sendEmail = require("../utils/sendEmail");
