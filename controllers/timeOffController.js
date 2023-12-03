@@ -1,6 +1,6 @@
 const { attendanceDB } = require("../models/attendanceDB");
 const { employeeDB } = require("../models/employeeDB");
-const { attendanceSummaryDB } = require("../models/attendanceSummaryDB");
+const { timeOffDB, isTimeOffFormValid } = require("../models/timeOffDB");
 const asyncHandler = require("express-async-handler");
 const { verifyClockInToken } = require("../utils/verifyClockInToken");
 const { doesDepartEarly, doesArriveLate } = require("../utils/checkTimeStatus");
@@ -19,11 +19,30 @@ const getTimeOff = asyncHandler(async (req, res) => {
  * @access public
  */
 const createNewTimeOff = asyncHandler(async (req, res) => {
-  // const { id } = req.params;
-  // const attendance = await attendanceDB.find({ userId: id }).lean();
-  // if (!attendance.length) {
-  //   return res.status(400).type("json").send({ msg: "No attendance found!" });
-  // }
+  const { type, startDate, endDate, reason } = req.body;
+  try {
+    const { error } = isTimeOffFormValid({ type, startDate, endDate, reason });
+    if (error) {
+      return res.status(404).json({ msg: error.details[0].message });
+    }
+
+    // create new timeOff
+    const timeOff = await timeOffDB.create({
+      userId: "654acbf48626cf74c1d45549",
+      type,
+      startDate,
+      endDate,
+      reason,
+    });
+
+    // success
+    res.status(201).json({
+      msg: `Time-off created!`,
+    });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
+  }
   // res.status(200).json(attendance);
 });
 

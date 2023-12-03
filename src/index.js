@@ -33,8 +33,9 @@ app.use("/", require("../routes/root"));
 
 // employee
 app.use("/employee/", require("../routes/employeeRouter"));
-app.use("/employee/attendance", verifyUserLoginToken);
+// app.use("/employee/attendance", verifyUserLoginToken);
 app.use("/employee/attendance", require("../routes/attendanceRouter"));
+app.use("/employee/timeOff", require("../routes/timeOffRouter"));
 
 // Mark employee as late at 10:30 am every day if not clocked in
 cron.schedule("09 1 * * *", async () => {
@@ -57,10 +58,10 @@ app.use("/admin/", require("../routes/adminRouter"));
 // app.use("/admin/confirm-attendance", verifyAdminLoginToken);
 
 // load attendance
-app.use("/admin/attendance", require("../routes/attendanceSummaryRouter"));
-
-// load employees
-app.use("/admin/employee", require("../routes/employeeRouter"));
+app.use(
+  "/admin/attendanceSummary",
+  require("../routes/attendanceSummaryRouter")
+);
 
 // confirm attendance
 app.use(

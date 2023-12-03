@@ -16,6 +16,79 @@ const getAttendance = asyncHandler(async (req, res) => {
   res.status(200).json(attendance);
 });
 
+const getAttendanceSummary = asyncHandler(async (req, res) => {
+  const { late, onTime, earlyDeparture, absent } = req.query;
+
+  const attendanceSummary = await attendanceSummaryDB.find().lean();
+
+  if (!attendanceSummary.length) {
+    return res
+      .status(400)
+      .type("json")
+      .send({ msg: "No attendance summary found!" });
+  }
+
+  if (late) {
+    console.log("called");
+    const lateResult = attendanceSummary.filter(
+      (summary) => summary.arriveLate
+    );
+
+    console.log(lateResult);
+
+    if (!lateResult) {
+      return res.status(400).type("json").send({ msg: "No late found!" });
+    }
+
+    return res.status(200).json(lateResult);
+  }
+
+  if (onTime) {
+    const onTimeResult = attendanceSummary.filter((summary) => summary.onTime);
+
+    if (!onTimeResult) {
+      return res.status(400).type("json").send({ msg: "No on time found!" });
+    }
+    return res.status(200).json(onTimeResult);
+  }
+
+  if (earlyDeparture) {
+    const earlyDepartResult = attendanceSummary.filter(
+      (summary) => summary.departEarly
+    );
+    if (!earlyDepartResult) {
+      return res
+        .status(400)
+        .type("json")
+        .send({ msg: "No on early departure found!" });
+    }
+
+    return res.status(200).json(earlyDepartResult);
+  }
+
+  if (absent) {
+    const absentResult = attendanceSummary.filter(
+      (summary) => summary.isAbsent
+    );
+
+    const weekdayAbsent = absentResult.filter((absent) => {
+      const date = absent.confirmationTime;
+
+      const isDateWeekend = checkIfWeekend(date);
+
+      return !isDateWeekend;
+    });
+
+    if (!weekdayAbsent) {
+      return res.status(400).type("json").send({ msg: "No on absent found!" });
+    }
+
+    return res.status(200).json(weekdayAbsent);
+  }
+
+  res.status(200).json(attendanceSummary);
+});
+
 /**
  * @desc Get attendance by id
  * @route Get/attendance
@@ -31,104 +104,6 @@ const getAttendanceById = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json(attendance);
-});
-
-/**
- * @desc Get unconfirmed attendance
- * @route Get / attendance
- * @access public
- */
-const getPendingAttendance = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
- 
-  const attendance = await attendanceDB.find({ status: "pending" }).lean();
-
-  if (!attendance.length) {
-    return res.status(400).type("json").send({ msg: "No attendance found!" });
-  }
-
-  res.status(200).json(attendance);
-});
-
-/**
- * @desc Get absent attendance
- * @route Get / attendance
- * @access private
- */
-const getAbsenceAttendance = asyncHandler(async (req, res) => {
-  // const { id } = req.params;
-
-  const totalAbsent = await attendanceSummaryDB.find({ isAbsent: true }).lean();
-
-  if (!totalAbsent.length) {
-    return res.status(400).type("json").send("No absent attendance found!");
-  }
-
-  const weekdayAbsent = [...totalAbsent].filter((absent) => {
-    const date = absent.confirmationTime;
-
-    const isDateWeekend = checkIfWeekend(date);
-
-    return !isDateWeekend;
-  });
-
-  res.status(200).json({ absent: weekdayAbsent });
-});
-
-/**
- * @desc Get late attendance
- * @route Get / attendance
- * @access private
- */
-const getLateAttendance = asyncHandler(async (req, res) => {
-  // const { id } = req.params;
-
-  const totalLate = await attendanceSummaryDB.find({ arriveLate: true }).lean();
-
-  if (!totalLate.length) {
-    return res.status(400).type("json").send("No late found!");
-  }
-
-  res.status(200).json({ late: totalLate });
-});
-
-/**
- * @desc Get early departure attendance
- * @route Get / attendance
- * @access private
- */
-const getEarlyDepartureAttendance = asyncHandler(async (req, res) => {
-  // const { id } = req.params;
-
-  const earlyDepart = await attendanceSummaryDB
-    .find({ departEarly: true })
-    .lean();
-
-  if (!earlyDepart.length) {
-    return res.status(400).type("json").send("No depart early found!");
-  }
-
-  res.status(200).json({ early: earlyDepart });
-});
-
-/**
- * @desc Get on-time attendance
- * @route Get / attendance
- * @access private
- */
-const getOnTimeAttendance = asyncHandler(async (req, res) => {
-  // const { id } = req.params;
-
-  const onTimeAttendance = await attendanceSummaryDB
-    .find({ onTime: true })
-    .lean();
-
-  if (!onTimeAttendance.length) {
-    return res.status(400).type("json").send("No on time found!");
-  }
-
-  res.status(200).json({ onTime: onTimeAttendance });
 });
 
 /**
@@ -229,9 +204,5 @@ module.exports = {
   rejectAttendance,
   getAttendance,
   getAttendanceById,
-  getLateAttendance,
-  getAbsenceAttendance,
-  getPendingAttendance,
-  getEarlyDepartureAttendance,
-  getOnTimeAttendance,
+  getAttendanceSummary,
 };

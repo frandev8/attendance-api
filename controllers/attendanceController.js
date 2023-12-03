@@ -8,13 +8,31 @@ const { verifyClockInToken } = require("../utils/verifyClockInToken");
  * @access public
  */
 const getAttendance = asyncHandler(async (req, res) => {
-  const attendance = await attendanceDB.find({}).lean();
+  const { pending } = req.query;
 
-  if (!attendance.length) {
+  const attendances = await attendanceDB.find({}).lean();
+
+  if (!attendances.length) {
     return res.status(400).type("json").send({ msg: "No attendance found!" });
   }
 
-  res.status(200).json(attendance);
+  if (pending) {
+    console.log(attendances);
+
+    const pendingAttendance = attendances.filter(
+      (attendance) => attendance.status === "pending"
+    );
+
+    if (!pendingAttendance) {
+      return res
+        .status(400)
+        .type("json")
+        .send({ msg: "No pending attendance found!" });
+    }
+    return res.status(200).json(pendingAttendance);
+  }
+
+  res.status(200).json(attendances);
 });
 
 /**

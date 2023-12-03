@@ -5,11 +5,11 @@ const passwordComplexity = require("joi-password-complexity");
 const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const timeOffSchema = new mongoose.Schema({
-  adminId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "admin",
-    require: true,
-  },
+  // adminId: {
+  //   type: mongoose.Schema.Types.ObjectId,
+  //   ref: "admin",
+  //   require: true,
+  // },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "employee",
@@ -65,23 +65,19 @@ const timeOffDB = mongoose.model("time off", timeOffSchema);
 
 //   return schema.validate(data);
 // }
-// function registerValidate(data) {
-//   const schema = joi.object({
-//     username: joi.string().min(3).max(30).required().label("username"),
-//     password: passwordComplexity(undefined, "password").required(),
-//     email: joi
-//       .string()
-//       .email({
-//         minDomainSegments: 2,
-//         tlds: { allow: ["com", "net"] },
-//       })
-//       .label("username")
-//       .required(),
-//     role: joi.string().required().label("role"),
-//   });
 
-//   return schema.validate(data);
-// }
+function isTimeOffFormValid(data) {
+  const schema = joi.object({
+    type: joi
+      .string()
+      .required()
+      .valid("casual", "sick", "earned", "adjustment"),
+    startDate: joi.date().required(),
+    endDate: joi.date().required().greater(joi.ref("startDate")),
+    reason: joi.string().required().not().empty(),
+  });
 
-// , loginValidate, registerValidate
-module.exports = { timeOffDB };
+  return schema.validate(data);
+}
+
+module.exports = { timeOffDB, isTimeOffFormValid };

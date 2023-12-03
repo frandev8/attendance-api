@@ -63,31 +63,28 @@ const loginEmployee = asyncHandler(async (req, res) => {
  * @access Private
  */
 const getEmployee = asyncHandler(async (req, res) => {
+  const { active } = req.query;
+
   const employees = await employeeDB.find({}).select("-password").lean();
 
   if (!employees.length) {
     return res.status(400).type("json").send({ msg: "Users not found!" });
   }
 
-  res.status(200).json(employees);
-});
+  if (active) {
+    const activeEmployees = employees.filter((employee) => employee.activate);
 
-/**
- * @desc Get activated users
- * @route Get /users
- * @access Private
- */
-const getActivatedEmployee = asyncHandler(async (req, res) => {
-  const employees = await employeeDB
-    .find({ activate: true })
-    .select("-password")
-    .lean();
+    if (!activeEmployees) {
+      return res
+        .status(400)
+        .type("json")
+        .send({ msg: "No active user found!" });
+    }
 
-  if (!employees.length) {
-    return res.status(400).type("json").send({ msg: "Users not found!" });
+    return res.status(200).json(activeEmployees);
   }
 
-  res.status(200).json({ employees: employees });
+  res.status(200).json(employees);
 });
 
 /**
@@ -142,8 +139,6 @@ const createNewEmployee = asyncHandler(async (req, res) => {
         .type("json")
         .send({ msg: "username already exist, use new one." });
     }
-
-    console.log(password, password.length);
 
     // hashing password
     const hashedPwd = hashPwd(password);
@@ -289,5 +284,4 @@ module.exports = {
   deleteEmployee,
   loginEmployee,
   verifyEmployee,
-  getActivatedEmployee,
 };
