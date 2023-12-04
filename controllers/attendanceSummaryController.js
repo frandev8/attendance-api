@@ -29,12 +29,9 @@ const getAttendanceSummary = asyncHandler(async (req, res) => {
   }
 
   if (late) {
-    console.log("called");
     const lateResult = attendanceSummary.filter(
       (summary) => summary.arriveLate
     );
-
-    console.log(lateResult);
 
     if (!lateResult) {
       return res.status(400).type("json").send({ msg: "No late found!" });

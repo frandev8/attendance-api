@@ -95,13 +95,13 @@ const getEmployee = asyncHandler(async (req, res) => {
 const getEmployeeById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const employees = await employeeDB.findById(id).select("-password").lean();
+  // const employees = await employeeDB.findById(id).select("-password").lean();
 
-  if (!employees) {
-    return res.status(400).type("json").send({ msg: "Users not found!" });
-  }
+  // if (!employees) {
+  //   return res.status(400).type("json").send({ msg: "Users not found!" });
+  // }
 
-  res.status(200).json(employees);
+  // res.status(200).json(employees);
 });
 
 /**

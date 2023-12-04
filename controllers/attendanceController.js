@@ -8,6 +8,7 @@ const { verifyClockInToken } = require("../utils/verifyClockInToken");
  * @access public
  */
 const getAttendance = asyncHandler(async (req, res) => {
+
   const { pending } = req.query;
 
   const attendances = await attendanceDB.find({}).lean();

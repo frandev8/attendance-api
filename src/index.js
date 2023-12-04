@@ -32,10 +32,12 @@ app.use(cookieParser());
 app.use("/", require("../routes/root"));
 
 // employee
-app.use("/employee/", require("../routes/employeeRouter"));
-// app.use("/employee/attendance", verifyUserLoginToken);
 app.use("/employee/attendance", require("../routes/attendanceRouter"));
 app.use("/employee/timeOff", require("../routes/timeOffRouter"));
+app.use("/employee/notification", require("../routes/notificationRouter"));
+app.use("/employee/announcement", require("../routes/announcementRouter"));
+// app.use("/employee/attendance", verifyUserLoginToken);
+app.use("/employee/", require("../routes/employeeRouter"));
 
 // Mark employee as late at 10:30 am every day if not clocked in
 cron.schedule("09 1 * * *", async () => {
@@ -53,8 +55,6 @@ cron.schedule("30 17 * * *", async () => {
   clockOutAttendance(nonClockedOutAttendance);
 });
 
-// admin
-app.use("/admin/", require("../routes/adminRouter"));
 // app.use("/admin/confirm-attendance", verifyAdminLoginToken);
 
 // load attendance
@@ -70,12 +70,17 @@ app.use(
 );
 
 // time-off
-// app.use("/admin/timeOff", require("../routes/timeOffRouter"));
+app.use("/admin/timeOff", require("../routes/timeOffRouter"));
 
 // notification
-// app.use("/admin/notification", require("../routes/notificationRouter"));
+app.use("/admin/notification", require("../routes/notificationRouter"));
 
+// announcement
+app.use("/admin/announcement", require("../routes/announcementRouter"));
 // app.use("/admin/confirm-attendance", verifyLoginToken);
+
+// admin
+app.use("/admin/", require("../routes/adminRouter"));
 
 app.all("*", (req, res) => {
   const filePath = path.join(__dirname, "..", "404.html");

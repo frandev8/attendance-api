@@ -1,113 +1,75 @@
-const { timeOffDB, isTimeOffFormValid } = require("../models/timeOffDB");
+const {
+  announcementDB,
+  isAnnouncementFormValid,
+} = require("../models/announcementDB");
 const asyncHandler = require("express-async-handler");
-const { verifyClockInToken } = require("../utils/verifyClockInToken");
-const { doesDepartEarly, doesArriveLate } = require("../utils/checkTimeStatus");
 
-const getTimeOff = asyncHandler(async (req, res) => {
-  const { approved, pending } = req.query;
-
-  const timeOff = await timeOffDB.find().lean();
-
-  if (!timeOff.length) {
-    return res.status(400).type("json").send({ msg: "No timeOff found!" });
+const getAnnouncement = asyncHandler(async (req, res) => {
+  
+  const announcement = await announcementDB.find({}).lean();
+  if (!announcement.length) {
+    return res.status(400).type("json").send({ msg: "No announcement found!" });
   }
-
-  if (approved) {
-    const approvedTimeOff = await timeOffDB.find({ status: "approved" }).lean();
-
-    if (!approvedTimeOff.length) {
-      return res
-        .status(400)
-        .type("json")
-        .send({ msg: "No approved time-off found!" });
-    }
-
-    return res.status(200).json(approvedTimeOff);
-  }
-
-  if (pending) {
-    const pendingTimeOff = await timeOffDB.find({ status: "pending" }).lean();
-
-    if (!pendingTimeOff.length) {
-      return res
-        .status(400)
-        .type("json")
-        .send({ msg: "No pending time-off found!" });
-    }
-
-    return res.status(200).json(pendingTimeOff);
-  }
-
-  res.status(200).json(timeOff);
-});
-
-const getTimeOffById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const timeOff = await timeOffDB.find({ userId: id }).lean();
-
-  if (!timeOff.length) {
-    return res.status(400).type("json").send({ msg: "No timeOff found!" });
-  }
-  res.status(200).json(timeOff);
+  res.status(200).json(announcement);
 });
 
 /**
- * @desc create new timeOff
- * @route Post / timeOff
+ * @desc Get announcement by id
+ * @route Get/attendance
  * @access public
  */
-const createNewTimeOff = asyncHandler(async (req, res) => {
-  const { type, startDate, endDate, reason } = req.body;
+const getAnnouncementById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-  console.log("clicked");
+  const announcement = await announcementDB.find({ adminId: id }).lean();
+  if (!announcement.length) {
+    return res.status(400).type("json").send({ msg: "No announcement found!" });
+  }
+  res.status(200).json(announcement);
+});
+
+/**
+ * @desc Post announcement
+ * @route Post / admin
+ * @access private
+ */
+const createNewAnnouncement = asyncHandler(async (req, res) => {
+  const { title, message, date, adminId } = req.body;
   try {
-    const { error } = isTimeOffFormValid({ type, startDate, endDate, reason });
+    const { error } = isAnnouncementFormValid({
+      adminId: "655772cfa78ba6376d4c7b32",
+      title,
+      date,
+      message,
+    });
     if (error) {
       return res.status(404).json({ msg: error.details[0].message });
     }
 
-    // create new timeOff
-    const timeOff = await timeOffDB.create({
-      userId: "654acbf48626cf74c1d45549",
-      type,
-      startDate,
-      endDate,
-      reason,
+    // create new announcement
+    const announcement = await announcementDB.create({
+      adminId: "655772cfa78ba6376d4c7b32",
+      title,
+      date,
+      message,
     });
 
     // success
     res.status(201).json({
-      msg: `Time-off created!`,
+      msg: `new notification created!`,
     });
-
-    console.log("success");
   } catch (e) {
     console.log(e.message);
     res.status(500).json({ msg: "internal server error" });
   }
-  // res.status(200).json(attendance);
 });
 
 /**
- * @desc Get attendance by id
- * @route Get/attendance
- * @access public
+ * @desc edit announcement
+ * @route Patch /admin
+ * @access private
  */
-const getConfirmedTimeOff = asyncHandler(async (req, res) => {
-  // const { id } = req.params;
-  // const attendance = await attendanceDB.find({ status: "pending" }).lean();
-  // if (!attendance.length) {
-  //   return res.status(400).type("json").send({ msg: "No attendance found!" });
-  // }
-  // res.status(200).json(attendance);
-});
-
-/**
- * @desc accept attendance
- * @route Post /admin
- * @access Private
- */
-const acceptTimeOff = asyncHandler(async (req, res) => {
+const editAnnouncementById = asyncHandler(async (req, res) => {
   // const { attendanceId } = req.body;
   // const userId = "654acbf48626cf74c1d45549" || req.user.userId;
   // try {
@@ -143,12 +105,12 @@ const acceptTimeOff = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc reject timeOff
- * @route Post /admin
- * @access private
+ * @desc delete announcement
+ * @route Delete /admin *
+ * @access Private
  */
 
-const rejectTimeOff = asyncHandler(async (req, res) => {
+const deleteAnnouncementById = asyncHandler(async (req, res) => {
   // const { attendanceId } = req.body;
   // const userId = "654acbf48626cf74c1d45549" || req.user.id;
   // try {
@@ -180,10 +142,9 @@ const rejectTimeOff = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
-  getConfirmedTimeOff,
-  createNewTimeOff,
-  acceptTimeOff,
-  rejectTimeOff,
-  getTimeOff,
-  getTimeOffById,
+  getAnnouncementById,
+  createNewAnnouncement,
+  editAnnouncementById,
+  deleteAnnouncementById,
+  getAnnouncement,
 };

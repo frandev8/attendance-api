@@ -4,7 +4,7 @@ const joi = require("joi");
 const passwordComplexity = require("joi-password-complexity");
 const AutoIncrement = require("mongoose-sequence")(mongoose);
 
-const notificationSchema = new mongoose.Schema({
+const announcementSchema = new mongoose.Schema({
   adminId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "admin",
@@ -30,7 +30,7 @@ const notificationSchema = new mongoose.Schema({
 //   start_seq: 100,
 // });
 
-const notificationDB = mongoose.model("notification", notificationSchema);
+const announcementDB = mongoose.model("announcement", announcementSchema);
 
 // function loginValidate(data) {
 //   const schema = joi.object({
@@ -59,7 +59,7 @@ const notificationDB = mongoose.model("notification", notificationSchema);
 //   return schema.validate(data);
 // }
 
-function isNotificationFormValid(data) {
+function isAnnouncementFormValid(data) {
   const schema = joi.object({
     adminId: joi.string().required(),
     date: joi.date().required(),
@@ -70,4 +70,4 @@ function isNotificationFormValid(data) {
   return schema.validate(data);
 }
 
-module.exports = { notificationDB, isNotificationFormValid };
+module.exports = { announcementDB, isAnnouncementFormValid };
