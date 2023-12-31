@@ -1,7 +1,6 @@
 const { Router } = require("express");
 const {
-  acceptAttendance,
-  rejectAttendance,
+  endorseAttendance,
   getAttendanceById,
   getAttendanceSummary,
 } = require("../controllers/attendanceSummaryController");
@@ -10,7 +9,6 @@ const attendanceSummaryRouter = Router();
 
 attendanceSummaryRouter.route("/").get(getAttendanceSummary);
 attendanceSummaryRouter.route("/:id").get(getAttendanceById);
-attendanceSummaryRouter.route("/:id/accept").post(acceptAttendance);
-attendanceSummaryRouter.route("/:id/reject").post(rejectAttendance);
+attendanceSummaryRouter.route("/endorse").post(endorseAttendance);
 
 module.exports = attendanceSummaryRouter;

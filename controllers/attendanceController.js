@@ -1,14 +1,18 @@
 const { attendanceDB } = require("../models/attendanceDB");
 const { employeeDB } = require("../models/employeeDB");
+const { attendanceSummaryDB } = require("../models/attendanceSummaryDB");
+const { autoClockOutDB } = require("../models/autoClockOutDB");
 const asyncHandler = require("express-async-handler");
 const { verifyClockInToken } = require("../utils/verifyClockInToken");
+const { response } = require("express");
+const jwt = require("jsonwebtoken");
+const checkIfWeekend = require("../utils/checkIfWeekend");
 /**
  * @desc Get all attendance
  * @route Get/attendance
  * @access public
  */
 const getAttendance = asyncHandler(async (req, res) => {
-
   const { pending } = req.query;
 
   const attendances = await attendanceDB.find({}).lean();
@@ -18,8 +22,6 @@ const getAttendance = asyncHandler(async (req, res) => {
   }
 
   if (pending) {
-    console.log(attendances);
-
     const pendingAttendance = attendances.filter(
       (attendance) => attendance.status === "pending"
     );
@@ -37,6 +39,37 @@ const getAttendance = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc Get auto clock out attendance by id
+ * @route Get/attendance
+ * @access public
+ */
+const getClockOutAttendanceById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const attendance = await attendanceDB
+    .find({ userId: id, status: "confirmed" })
+    .lean();
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  const autoClockOutAttend = await autoClockOutDB
+    .find({ userId: id, status: "confirmed" })
+    .lean();
+
+  const autoClockOutIdList = autoClockOutAttend.map((autoAttendance) =>
+    autoAttendance.attendanceId.toString()
+  );
+
+  const clockOutAttendance = attendance.filter((attend) => {
+    return !autoClockOutIdList.includes(attend._id.toString());
+  });
+
+  res.status(200).json(clockOutAttendance);
+});
+
+/**
  * @desc Get attendance by id
  * @route Get/attendance
  * @access public
@@ -44,10 +77,28 @@ const getAttendance = asyncHandler(async (req, res) => {
 const getAttendanceById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  const { approved, rejected } = req.query;
+
   const attendance = await attendanceDB.find({ userId: id }).lean();
 
   if (!attendance.length) {
     return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  if (approved) {
+    const approvedAttendance = attendance.filter(
+      (att) => att.status === "confirmed"
+    );
+
+    return res.status(200).json(approvedAttendance);
+  }
+
+  if (rejected) {
+    const approvedAttendance = attendance.filter(
+      (att) => att.status === "rejected" && !checkIfWeekend(att.clockInTime)
+    );
+
+    return res.status(200).json(approvedAttendance);
   }
 
   res.status(200).json(attendance);
@@ -60,27 +111,27 @@ const getAttendanceById = asyncHandler(async (req, res) => {
  */
 const checkIn = asyncHandler(async (req, res) => {
   const { clockInTime } = req.body;
-
-  const userId = req.user.id;
+  const { id } = req.params;
 
   try {
-    const employee = await employeeDB.findById(userId).exec();
+    const employee = await employeeDB.findById(id).exec();
 
     if (!employee) {
-      return res.status(401).type("json").send({ msg: "bad request" });
+      return res.status(401).type("json").send({ msg: "Unauthorize user" });
     }
 
     employee.lastCheckInDate = new Date(clockInTime);
     employee.save();
+
     const attendance = await attendanceDB.create({
       userId: employee._id,
       clockInTime: new Date(clockInTime),
     });
 
-    const token = attendance.generateAuthToken();
+    const token = attendance.generateCheckinAuthToken();
 
     // attendance created
-    res.status(201).json({ data: token, message: "clock in successful" });
+    res.status(201).json({ clockInToken: token, attendance: attendance });
   } catch (e) {
     console.log(e.message);
     res.status(500).json({ msg: "internal server error" });
@@ -94,21 +145,30 @@ const checkIn = asyncHandler(async (req, res) => {
  */
 
 const checkOut = asyncHandler(async (req, res) => {
-  const { clockOutTime, clockInToken } = req.body;
+  const { clockOutTime } = req.body;
+  const authorizationHeader = req.headers.authorization;
+
+  const token = authorizationHeader.substring(7);
 
   try {
-    const attendanceId = verifyClockInToken(clockInToken).id;
+    const attendanceId = verifyClockInToken(token).id;
 
     const attendance = await attendanceDB.findById(attendanceId).exec();
 
     if (!attendance) {
-      return res.status(401).type("json").send({ msg: "bad request" });
+      return res
+        .status(401)
+        .type("json")
+        .send({ msg: "Unauthorized attendance token" });
     }
 
     attendance.clockOutTime = new Date(clockOutTime);
     attendance.save();
 
-    res.status(200).json({ msg: "clock out successful" });
+    res.status(200).json({
+      msg: "clock out successful",
+      clockOutTime: attendance.clockOutTime,
+    });
   } catch (e) {
     console.log(e.message);
     res.status(500).json({ msg: "internal server error" });
@@ -116,48 +176,99 @@ const checkOut = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc confirm attendance
- * @route Post / admin
- * @access Private
+ * @desc break attendance
+ * @route Post / user
+ * @access Public
  */
-const confirmAttendance = asyncHandler(async (req, res) => {
-  // const { username, password, role } = req.body;
-  // try {
-  //   const { error } = loginValidate({ username, password, role });
-  //   if (error) {
-  //     return res.status(400).json({ msg: error.details[0].message });
-  //   }
-  //   const employees = await employeeDB.findOne({ username }).exec();
-  //   if (!employees) {
-  //     return res
-  //       .status(401)
-  //       .type("json")
-  //       .send({ msg: "invalid username or password" });
-  //   }
-  //   if (!doHashPwdMatch(password, employees.password)) {
-  //     return res
-  //       .status(401)
-  //       .type("json")
-  //       .send({ msg: "password doesn't match, try again" });
-  //   }
-  //   if (!employees.activate) {
-  //     return res.status(400).type("json").send({
-  //       msg: "please verify your account. Check your email.",
-  //     });
-  //   }
-  //   const token = employees.generateAuthToken();
-  //   console.log(password, password.length);
-  //   res.status(200).json({ data: token, message: "logged in successfully" });
-  // } catch (e) {
-  //   console.log(e.message);
-  //   res.status(500).json({ msg: "internal server error" });
-  // }
+const startBreak = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { breakTime } = req.body;
+  const { mode } = req.query;
+
+  if (!id || !mode) {
+    return res.status(401).type("json").send({
+      msg: "Unauthorized failed. Require userId and mode",
+    });
+  }
+  const attendanceId = req.user.attendanceId;
+
+  const attendance = await attendanceDB
+    .find({ _id: attendanceId, userId: id })
+    .exec();
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  if (mode === "start") {
+    attendance[0].breakStartTime = breakTime;
+    const token = attendance.generateBreakAuthToken();
+
+    return res.status(200).json({
+      msg: "break started successful",
+      breakToken: token,
+    });
+  }
+
+  if (mode === "end") {
+    attendance[0].breakEndTime = breakTime;
+
+    return res.status(200).json({
+      msg: "break ended successful",
+    });
+  }
+});
+
+/**
+ * @desc overtime attendance
+ * @route Post / user
+ * @access Public
+ */
+const startOvertime = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { overtimeTime } = req.body;
+  const { mode } = req.query;
+
+  if (!id || !mode) {
+    return res.status(401).type("json").send({
+      msg: "Unauthorized failed. Require userId and mode",
+    });
+  }
+  const attendanceId = req.user.attendanceId;
+
+  const attendance = await attendanceDB
+    .find({ _id: attendanceId, userId: id })
+    .exec();
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  if (mode === "start") {
+    attendance[0].overtimeStartTime = overtimeTime;
+    const token = attendance.generateOvertimeAuthToken();
+
+    return res.status(200).json({
+      msg: "break started successful",
+      breakToken: token,
+    });
+  }
+
+  if (mode === "end") {
+    attendance[0].overtimeEndTime = overtimeTime;
+  }
+
+  res.status(200).json({
+    msg: "break successful",
+  });
 });
 
 module.exports = {
   getAttendance,
   checkIn,
   checkOut,
-  confirmAttendance,
+  getClockOutAttendanceById,
+  startBreak,
+  startOvertime,
   getAttendanceById,
 };

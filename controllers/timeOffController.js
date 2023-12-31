@@ -1,10 +1,12 @@
 const { timeOffDB, isTimeOffFormValid } = require("../models/timeOffDB");
+const { employeeDB } = require("../models/employeeDB");
 const asyncHandler = require("express-async-handler");
 const { verifyClockInToken } = require("../utils/verifyClockInToken");
 const { doesDepartEarly, doesArriveLate } = require("../utils/checkTimeStatus");
+const { response } = require("express");
 
 const getTimeOff = asyncHandler(async (req, res) => {
-  const { approved, pending } = req.query;
+  const { accepted, pending } = req.query;
 
   const timeOff = await timeOffDB.find().lean();
 
@@ -12,7 +14,7 @@ const getTimeOff = asyncHandler(async (req, res) => {
     return res.status(400).type("json").send({ msg: "No timeOff found!" });
   }
 
-  if (approved) {
+  if (accepted) {
     const approvedTimeOff = await timeOffDB.find({ status: "approved" }).lean();
 
     if (!approvedTimeOff.length) {
@@ -35,7 +37,18 @@ const getTimeOff = asyncHandler(async (req, res) => {
         .send({ msg: "No pending time-off found!" });
     }
 
-    return res.status(200).json(pendingTimeOff);
+    const modifiedPendingTimeOffPromises = pendingTimeOff.map(
+      async (timeOff) => {
+        const employee = await employeeDB.findById(timeOff.userId);
+
+        return { ...timeOff, username: employee.username };
+      }
+    );
+    const modifiedPendingTimeOff = await Promise.all(
+      modifiedPendingTimeOffPromises
+    );
+
+    return res.status(200).json(modifiedPendingTimeOff);
   }
 
   res.status(200).json(timeOff);
@@ -43,10 +56,18 @@ const getTimeOff = asyncHandler(async (req, res) => {
 
 const getTimeOffById = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { status } = req.query;
+
   const timeOff = await timeOffDB.find({ userId: id }).lean();
 
   if (!timeOff.length) {
     return res.status(400).type("json").send({ msg: "No timeOff found!" });
+  }
+
+  if (status === "approved") {
+    const approved = timeOff.filter((leave) => leave.status === "approved");
+
+    return res.status(200).json(approved);
   }
   res.status(200).json(timeOff);
 });
@@ -58,8 +79,7 @@ const getTimeOffById = asyncHandler(async (req, res) => {
  */
 const createNewTimeOff = asyncHandler(async (req, res) => {
   const { type, startDate, endDate, reason } = req.body;
-
-  console.log("clicked");
+  const { id } = req.params;
   try {
     const { error } = isTimeOffFormValid({ type, startDate, endDate, reason });
     if (error) {
@@ -68,7 +88,7 @@ const createNewTimeOff = asyncHandler(async (req, res) => {
 
     // create new timeOff
     const timeOff = await timeOffDB.create({
-      userId: "654acbf48626cf74c1d45549",
+      userId: id,
       type,
       startDate,
       endDate,
@@ -79,8 +99,6 @@ const createNewTimeOff = asyncHandler(async (req, res) => {
     res.status(201).json({
       msg: `Time-off created!`,
     });
-
-    console.log("success");
   } catch (e) {
     console.log(e.message);
     res.status(500).json({ msg: "internal server error" });
@@ -89,101 +107,50 @@ const createNewTimeOff = asyncHandler(async (req, res) => {
 });
 
 /**
- * @desc Get attendance by id
- * @route Get/attendance
- * @access public
- */
-const getConfirmedTimeOff = asyncHandler(async (req, res) => {
-  // const { id } = req.params;
-  // const attendance = await attendanceDB.find({ status: "pending" }).lean();
-  // if (!attendance.length) {
-  //   return res.status(400).type("json").send({ msg: "No attendance found!" });
-  // }
-  // res.status(200).json(attendance);
-});
-
-/**
  * @desc accept attendance
  * @route Post /admin
  * @access Private
  */
-const acceptTimeOff = asyncHandler(async (req, res) => {
-  // const { attendanceId } = req.body;
-  // const userId = "654acbf48626cf74c1d45549" || req.user.userId;
-  // try {
-  //   const employee = await employeeDB.findById(userId).exec();
-  //   if (!employee) {
-  //     return res.status(401).type("json").send({ msg: "bad request" });
-  //   }
-  //   const attendance = await attendanceDB.findById(attendanceId).exec();
-  //   if (!attendance) {
-  //     return res.status(401).type("json").send({ msg: "bad request" });
-  //   }
-  //   // console.log(attendance.clockInTime, "control in");
-  //   // console.log(attendance.clockOutTime, "control out");
-  //   const attendanceSummary = await attendanceSummaryDB.create({
-  //     userId: employee._id,
-  //     attendanceId: attendance._id,
-  //     confirmationTime: new Date(),
-  //     reason: "attendance record verified",
-  //     status: "confirmed",
-  //     departEarly: doesDepartEarly(attendance.clockOutTime),
-  //     arriveLate: doesArriveLate(attendance.clockInTime),
-  //     onTime: !doesArriveLate(attendance.clockInTime),
-  //   });
-  //   await attendanceSummary.save();
-  //   attendance.status = "confirmed";
-  //   await attendance.save();
-  //   // attendance created
-  //   res.status(201).json({ message: "attendance confirmed successful" });
-  // } catch (e) {
-  //   console.log(e.message);
-  //   res.status(500).json({ msg: "internal server error" });
-  // }
-});
+const endorseTimeOff = asyncHandler(async (req, res) => {
+  const { action } = req.query;
+  const { timeOffId, adminId } = req.body;
 
-/**
- * @desc reject timeOff
- * @route Post /admin
- * @access private
- */
+  console.log("called");
 
-const rejectTimeOff = asyncHandler(async (req, res) => {
-  // const { attendanceId } = req.body;
-  // const userId = "654acbf48626cf74c1d45549" || req.user.id;
-  // try {
-  //   const employee = await employeeDB.findById(userId).lean();
-  //   if (!employee) {
-  //     return res.status(401).type("json").send({ msg: "bad request" });
-  //   }
-  //   const attendance = await attendanceDB.findById(attendanceId).exec();
-  //   if (!attendance) {
-  //     return res.status(401).type("json").send({ msg: "bad request" });
-  //   }
-  //   await attendanceSummaryDB.create({
-  //     userId: employee._id,
-  //     attendanceId: attendance._id,
-  //     confirmationTime: new Date(),
-  //     reason: "bad attendance record",
-  //     status: "rejected",
-  //     departEarly: doesDepartEarly(attendance.clockOutTime),
-  //     arriveLate: doesArriveLate(attendance.clockInTime),
-  //     onTime: !doesArriveLate(attendance.clockInTime),
-  //   });
-  //   attendance.status = "rejected";
-  //   await attendance.save();
-  //   // attendance created
-  //   res.status(201).json({ message: "attendance rejected" });
-  // } catch (e) {
-  //   res.status(500).json({ msg: "internal server error" });
-  // }
+  try {
+    const timeOff = await timeOffDB.findById(timeOffId).exec();
+
+    if (!timeOff) {
+      res.status(401).type("json").send({ msg: "Unauthorized time-off id" });
+    }
+
+    if (action === "accept") {
+      console.log("accepted");
+      timeOff.status = "approved";
+      timeOff.adminId = adminId;
+      await timeOff.save();
+
+      return res.status(200).json({ msg: "Successful request" });
+    }
+
+    if (action === "decline") {
+      timeOff.status = "rejected";
+      timeOff.adminId = adminId;
+      await timeOff.save();
+
+      return res.status(200).json({ msg: "Successful request" });
+    }
+
+    res.status(400).json({ msg: "bad request" });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
+  }
 });
 
 module.exports = {
-  getConfirmedTimeOff,
   createNewTimeOff,
-  acceptTimeOff,
-  rejectTimeOff,
+  endorseTimeOff,
   getTimeOff,
   getTimeOffById,
 };

@@ -32,32 +32,6 @@ const notificationSchema = new mongoose.Schema({
 
 const notificationDB = mongoose.model("notification", notificationSchema);
 
-// function loginValidate(data) {
-//   const schema = joi.object({
-//     username: joi.string().min(3).max(30).required().label("username"),
-//     password: passwordComplexity(undefined, "password").required(),
-//     role: joi.string().required().label("role"),
-//   });
-
-//   return schema.validate(data);
-// }
-// function registerValidate(data) {
-//   const schema = joi.object({
-//     username: joi.string().min(3).max(30).required().label("username"),
-//     password: passwordComplexity(undefined, "password").required(),
-//     email: joi
-//       .string()
-//       .email({
-//         minDomainSegments: 2,
-//         tlds: { allow: ["com", "net"] },
-//       })
-//       .label("username")
-//       .required(),
-//     role: joi.string().required().label("role"),
-//   });
-
-//   return schema.validate(data);
-// }
 
 function isNotificationFormValid(data) {
   const schema = joi.object({

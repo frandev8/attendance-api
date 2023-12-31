@@ -5,7 +5,9 @@ const {
 const asyncHandler = require("express-async-handler");
 
 const getNotification = asyncHandler(async (req, res) => {
+
   const notification = await notificationDB.find({}).lean();
+  
   if (!notification.length) {
     return res.status(400).type("json").send({ msg: "No notification found!" });
   }
@@ -42,7 +44,7 @@ const createNewNotification = asyncHandler(async (req, res) => {
     });
 
     if (error) {
-      console.log(error);
+    
       return res.status(404).json({ msg: error.details[0].message });
     }
 

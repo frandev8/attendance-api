@@ -1,4 +1,4 @@
-const attendanceDB = require("../models/attendanceDB");
+const { attendanceDB } = require("../models/attendanceDB");
 
 async function getNonClockOutAttendance() {
   const attendance = await attendanceDB

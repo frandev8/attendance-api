@@ -1,8 +1,5 @@
 const mongoose = require("mongoose");
-const jwt = require("jsonwebtoken");
 const joi = require("joi");
-const passwordComplexity = require("joi-password-complexity");
-const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const announcementSchema = new mongoose.Schema({
   adminId: {
@@ -32,32 +29,6 @@ const announcementSchema = new mongoose.Schema({
 
 const announcementDB = mongoose.model("announcement", announcementSchema);
 
-// function loginValidate(data) {
-//   const schema = joi.object({
-//     username: joi.string().min(3).max(30).required().label("username"),
-//     password: passwordComplexity(undefined, "password").required(),
-//     role: joi.string().required().label("role"),
-//   });
-
-//   return schema.validate(data);
-// }
-// function registerValidate(data) {
-//   const schema = joi.object({
-//     username: joi.string().min(3).max(30).required().label("username"),
-//     password: passwordComplexity(undefined, "password").required(),
-//     email: joi
-//       .string()
-//       .email({
-//         minDomainSegments: 2,
-//         tlds: { allow: ["com", "net"] },
-//       })
-//       .label("username")
-//       .required(),
-//     role: joi.string().required().label("role"),
-//   });
-
-//   return schema.validate(data);
-// }
 
 function isAnnouncementFormValid(data) {
   const schema = joi.object({

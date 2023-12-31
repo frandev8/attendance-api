@@ -14,6 +14,10 @@ const attendanceSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  breakStartTime: { type: Date, default: null },
+  breakEndTime: { type: Date, default: null },
+  overtimeStartTime: { type: Date, default: null },
+  overtimeEndTime: { type: Date, default: null },
   clockOutTime: {
     type: Date,
     default: null,
@@ -24,7 +28,7 @@ const attendanceSchema = new mongoose.Schema({
   },
 });
 
-attendanceSchema.methods.generateAuthToken = function () {
+attendanceSchema.methods.generateCheckinAuthToken = function () {
   const token = jwt.sign(
     { userId: this.userId, id: this._id },
     process.env.CLOCKIN_TOKEN_CODE
@@ -33,40 +37,25 @@ attendanceSchema.methods.generateAuthToken = function () {
   return token;
 };
 
-// attendanceSchema.plugin(AutoIncrement, {
-//   inc_field: "track",
-//   id: "trackNums",
-//   start_seq: 100,
-// });
+attendanceSchema.methods.generateBreakAuthToken = function () {
+  const token = jwt.sign(
+    { breakTime: this.breakStartTime, id: this._id },
+    process.env.BREAK_TOKEN_CODE
+  );
+
+  return token;
+};
+
+attendanceSchema.methods.generateOvertimeAuthToken = function () {
+  const token = jwt.sign(
+    { overtimeTime: this.overtimeStartTime, id: this._id },
+    process.env.OVERTIME_TOKEN_CODE
+  );
+
+  return token;
+};
 
 const attendanceDB = mongoose.model("attendance", attendanceSchema);
 
-// function loginValidate(data) {
-//   const schema = joi.object({
-//     username: joi.string().min(3).max(30).required().label("username"),
-//     password: passwordComplexity(undefined, "password").required(),
-//     role: joi.string().required().label("role"),
-//   });
 
-//   return schema.validate(data);
-// }
-// function registerValidate(data) {
-//   const schema = joi.object({
-//     username: joi.string().min(3).max(30).required().label("username"),
-//     password: passwordComplexity(undefined, "password").required(),
-//     email: joi
-//       .string()
-//       .email({
-//         minDomainSegments: 2,
-//         tlds: { allow: ["com", "net"] },
-//       })
-//       .label("username")
-//       .required(),
-//     role: joi.string().required().label("role"),
-//   });
-
-//   return schema.validate(data);
-// }
-
-// , loginValidate, registerValidate
 module.exports = { attendanceDB };

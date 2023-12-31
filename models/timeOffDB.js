@@ -5,11 +5,11 @@ const passwordComplexity = require("joi-password-complexity");
 const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const timeOffSchema = new mongoose.Schema({
-  // adminId: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "admin",
-  //   require: true,
-  // },
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "admin",
+    default: null,
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "employee",

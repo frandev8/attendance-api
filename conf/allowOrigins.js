@@ -1,5 +1,6 @@
 const allowedOrigin = [
   "http://localhost:3000",
+  "http://localhost:3003",
   "http://localhost:5173",
   "https://www.kasapa-media-bbhx.onrender.com/",
   "https://kasapa-media-bbhx.onrender.com",

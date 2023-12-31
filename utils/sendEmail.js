@@ -6,7 +6,7 @@ const transporter = nodemailer.createTransport({
   port: 465,
   service: process.env.SERVICE,
   secure: true,
-  logger: true,
+  // logger: true,
   debug: true,
   auth: {
     user: process.env.USER_MAIL,
@@ -28,7 +28,7 @@ const sendEmail = async (email, subject, text) => {
   `,
     });
 
-    console.log("Message sent successfully", info.messageId);
+    // console.log("Message sent successfully", info.messageId);
   } catch (e) {
     console.log(e);
   }

@@ -20,7 +20,7 @@ const port = process.env.PORT || 3000;
 const {
   verifyUserLoginToken,
   verifyAdminLoginToken,
-} = require("../middleware/verifyToken");
+} = require("../middleware/validateToken");
 
 const app = express();
 
@@ -32,12 +32,16 @@ app.use(cookieParser());
 app.use("/", require("../routes/root"));
 
 // employee
-app.use("/employee/attendance", require("../routes/attendanceRouter"));
+app.use(
+  "/employee/attendance",
+  // verifyUserLoginToken,
+  require("../routes/attendanceRouter")
+);
 app.use("/employee/timeOff", require("../routes/timeOffRouter"));
 app.use("/employee/notification", require("../routes/notificationRouter"));
 app.use("/employee/announcement", require("../routes/announcementRouter"));
+app.use("/employee", require("../routes/employeeRouter"));
 // app.use("/employee/attendance", verifyUserLoginToken);
-app.use("/employee/", require("../routes/employeeRouter"));
 
 // Mark employee as late at 10:30 am every day if not clocked in
 cron.schedule("09 1 * * *", async () => {
@@ -48,9 +52,9 @@ cron.schedule("09 1 * * *", async () => {
 });
 
 // clock out every employee after 5:30 pm every day if they're not clocked out
-cron.schedule("30 17 * * *", async () => {
+cron.schedule("29 13 * * *", async () => {
   // Get the list of all attendance (not clocked out)
-  const nonClockedOutAttendance = getNonClockOutAttendance();
+  const nonClockedOutAttendance = await getNonClockOutAttendance();
 
   clockOutAttendance(nonClockedOutAttendance);
 });
@@ -64,10 +68,7 @@ app.use(
 );
 
 // confirm attendance
-app.use(
-  "/admin/confirm-attendance",
-  require("../routes/attendanceSummaryRouter")
-);
+app.use("/admin/attendance", require("../routes/attendanceSummaryRouter"));
 
 // time-off
 app.use("/admin/timeOff", require("../routes/timeOffRouter"));

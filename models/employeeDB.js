@@ -18,12 +18,21 @@ const employeeSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    contact: {
+    firstname: {
+      type: String,
+      required: true,
+    },
+    lastname: {
+      type: String,
+      default: "",
+    },
+    phone: {
       type: String,
       default: "",
     },
     role: {
       type: String,
+      enum: ["employee", "admin"],
       required: true,
     },
     lastCheckInDate: {
@@ -59,27 +68,54 @@ function loginValidate(data) {
   const schema = joi.object({
     username: joi.string().min(3).max(30).required().label("username"),
     password: passwordComplexity(undefined, "password").required(),
-    role: joi.string().required().label("role"),
+    role: joi.string().required().label("role").valid("employee"),
   });
-
   return schema.validate(data);
 }
-function registerValidate(data) {
+
+
+
+function registerValidatePhase1(data) {
   const schema = joi.object({
     username: joi.string().min(3).max(30).required().label("username"),
-    password: passwordComplexity(undefined, "password").required(),
     email: joi
       .string()
       .email({
         minDomainSegments: 2,
         tlds: { allow: ["com", "net"] },
       })
-      .label("username")
+      .label("email")
       .required(),
-    role: joi.string().required().label("role"),
+    role: joi.string().required().label("role").valid("employee"),
   });
 
   return schema.validate(data);
 }
 
-module.exports = { employeeDB, loginValidate, registerValidate };
+function registerValidatePhase2(data) {
+  const schema = joi.object({
+    username: joi.string().min(3).max(30).required().label("username"),
+    email: joi
+      .string()
+      .email({
+        minDomainSegments: 2,
+        tlds: { allow: ["com", "net"] },
+      })
+      .label("email")
+      .required(),
+    password: passwordComplexity(undefined, "password").required(),
+    firstname: joi.string().min(3).required().label("firstname"),
+    lastname: joi.string().label("lastname"),
+    phone: joi.string().required().min(9).max(14).label("phone"),
+    role: joi.string().required().label("role").valid("employee"),
+  });
+
+  return schema.validate(data);
+}
+
+module.exports = {
+  employeeDB,
+  loginValidate,
+  registerValidatePhase1,
+  registerValidatePhase2,
+};

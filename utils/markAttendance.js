@@ -2,6 +2,7 @@ const { attendanceDB } = require("../models/attendanceDB");
 const { employeeDB } = require("../models/employeeDB");
 const { attendanceSummaryDB } = require("../models/attendanceSummaryDB");
 const { isAbsent } = require("./checkTimeStatus");
+const { autoClockOutDB } = require("../models/autoClockOutDB");
 
 async function markAttendanceAbsent() {
   const employees = await employeeDB
@@ -52,29 +53,36 @@ async function markAbsent(employees) {
       });
 
       await attendanceSummary.save();
-
-      console.log("success");
     }
   });
 }
 
 async function clockOutAttendance(attendance) {
   // Iterate through all employees and mark them as absent if they haven't clocked in
+
   attendance.forEach(async (attendance) => {
     const id = attendance._id;
 
-    const autoClockOut = new Date().setHours(17, 0, 0);
+    const clockOutDate = new Date().setHours(17, 0, 0);
 
-    const presence = await attendanceDB.findById(id).exec();
+    const matchAttendance = await attendanceDB.findById(id).exec();
 
-    if (!presence) {
+    if (!matchAttendance) {
       return "";
     }
 
-    presence.clockOutTime = autoClockOut;
-    presence.save();
+    matchAttendance.clockOutTime = clockOutDate;
+    matchAttendance.save();
+
+    const autoClockOut = await autoClockOutDB.create({
+      attendanceId: id,
+      userId: matchAttendance.userId,
+      status: "pending",
+      date: clockOutDate,
+    });
+
+    console.log("marked");
   });
-  console.log("success");
 }
 
 module.exports = { clockOutAttendance, markAttendanceAbsent };
