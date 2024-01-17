@@ -7,6 +7,8 @@ const mongoose = require("mongoose");
 const { readFileSync } = require("fs");
 const cron = require("node-cron");
 const path = require("path");
+const bodyParser = require("body-parser");
+
 const {
   markAttendanceAbsent,
   clockOutAttendance,
@@ -24,12 +26,15 @@ const {
 
 const app = express();
 
+app.use(bodyParser.json({ limit: "15mb" }));
+
 connectDB();
 
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/", require("../routes/root"));
+app.use("/banner", require("../routes/root"));
 
 // employee
 app.use(
@@ -44,20 +49,20 @@ app.use("/employee", require("../routes/employeeRouter"));
 // app.use("/employee/attendance", verifyUserLoginToken);
 
 // Mark employee as late at 10:30 am every day if not clocked in
-cron.schedule("09 1 * * *", async () => {
-  // Get the list of all employees (activates employees)
-  markAttendanceAbsent();
+// cron.schedule("09 1 * * *", async () => {
+//   // Get the list of all employees (activates employees)
+//   markAttendanceAbsent();
 
-  // markAbsent(activatedEmployees);
-});
+//   // markAbsent(activatedEmployees);
+// });
 
 // clock out every employee after 5:30 pm every day if they're not clocked out
-cron.schedule("29 13 * * *", async () => {
-  // Get the list of all attendance (not clocked out)
-  const nonClockedOutAttendance = await getNonClockOutAttendance();
+// cron.schedule("29 13 * * *", async () => {
+//   // Get the list of all attendance (not clocked out)
+//   const nonClockedOutAttendance = await getNonClockOutAttendance();
 
-  clockOutAttendance(nonClockedOutAttendance);
-});
+//   clockOutAttendance(nonClockedOutAttendance);
+// });
 
 // app.use("/admin/confirm-attendance", verifyAdminLoginToken);
 

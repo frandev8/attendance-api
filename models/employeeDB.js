@@ -73,7 +73,23 @@ function loginValidate(data) {
   return schema.validate(data);
 }
 
+const passwordComplexityOptions = {
+  min: 8,
+  max: 20,
+  lowerCase: 1,
+  upperCase: 1,
+  numeric: 1,
+  symbols: undefined,
+  requirementCount: 2,
+};
 
+function passwordValidate(data) {
+  const schema = joi.object({
+    old: passwordComplexity(passwordComplexityOptions, "old-pass").required(),
+    new: passwordComplexity(passwordComplexityOptions, "new-pass").required(),
+  });
+  return schema.validate(data);
+}
 
 function registerValidatePhase1(data) {
   const schema = joi.object({
@@ -118,4 +134,5 @@ module.exports = {
   loginValidate,
   registerValidatePhase1,
   registerValidatePhase2,
+  passwordValidate,
 };

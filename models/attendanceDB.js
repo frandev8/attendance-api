@@ -57,5 +57,4 @@ attendanceSchema.methods.generateOvertimeAuthToken = function () {
 
 const attendanceDB = mongoose.model("attendance", attendanceSchema);
 
-
 module.exports = { attendanceDB };

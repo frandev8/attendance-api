@@ -1,7 +1,7 @@
 const { attendanceDB } = require("../models/attendanceDB");
 const { employeeDB } = require("../models/employeeDB");
 const { attendanceSummaryDB } = require("../models/attendanceSummaryDB");
-const { isAbsent } = require("./checkTimeStatus");
+const { isAbsent } = require("./date");
 const { autoClockOutDB } = require("../models/autoClockOutDB");
 
 async function markAttendanceAbsent() {

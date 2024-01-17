@@ -13,6 +13,7 @@ const tokenDB = require("../models/tokenDB");
 const adminVerifyDB = require("../models/verifyAdminLoginDB");
 const sendEmail = require("../utils/sendEmail");
 const { avatarDB } = require("../models/avatarDB");
+const { passwordValidate } = require("../models/employeeDB");
 
 /**
  * @desc Login users
@@ -71,8 +72,6 @@ const createNewAdmin = asyncHandler(async (req, res) => {
   const { username, password, email, role, phone, firstname, lastname } =
     req.body;
 
-  console.log("called");
-
   try {
     // confirm data
     const { error } = registerValidatePhase2({
@@ -87,7 +86,6 @@ const createNewAdmin = asyncHandler(async (req, res) => {
     if (error) {
       return res.status(404).json({ msg: error.details[0].message });
     }
-    
 
     // check for duplicate
     let duplicate = await adminDB.findOne({ email }).lean();
@@ -108,7 +106,6 @@ const createNewAdmin = asyncHandler(async (req, res) => {
         .type("json")
         .send({ msg: "username already exist, use new one." });
     }
-    console.log("no username duplication");
 
     // hashing password
     const hashedPwd = hashPwd(password);
@@ -130,6 +127,7 @@ const createNewAdmin = asyncHandler(async (req, res) => {
       token: randomBytes(32).toString("hex"),
     });
 
+    // eslint-disable-next-line no-undef
     const message = `${process.env.BASE_URL}/admin/auth/verify/${newAdmin._id}/${adminVerificationToken.token}`;
 
     await sendEmail(newAdmin.email, "Please verify email", message);
@@ -258,6 +256,7 @@ const getAdminById = asyncHandler(async (req, res) => {
 const setAdminAvatar = asyncHandler(async (req, res) => {
   const { id, imgUrlBase64 } = req.body;
 
+  console.log(imgUrlBase64, "image url");
   if (!id || !imgUrlBase64) {
     return res.status(400).json({ msg: "must provide an id and img url" });
   }
@@ -329,10 +328,19 @@ const setAdminNewPassword = asyncHandler(async (req, res) => {
   }
 
   try {
-    const admin = await adminDB.findById(id).select("-password").lean();
+    const { error } = passwordValidate({
+      old: formData.oldPassword,
+      new: formData.newPassword,
+    });
+
+    if (error) {
+      return res.status(401).json({ msg: error.details[0].message });
+    }
+
+    const admin = await adminDB.findById(id).exec();
 
     if (!admin) {
-      return res.status(401).type("json").send({ msg: "Users not found!" });
+      return res.status(401).type("json").send({ msg: "admin not found!" });
     }
 
     if (!doHashPwdMatch(formData.oldPassword, admin.password)) {
@@ -358,7 +366,6 @@ module.exports = {
   verifyAdminMail,
   checkAdminDuplicate,
   getAdminById,
-
   setAdminNewPassword,
   getAdminAvatar,
   setAdminAvatar,

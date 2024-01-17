@@ -27,17 +27,16 @@ const verifyUserCheckinToken = (req, res, next) => {
 
   if (authorizationHeader && authorizationHeader.startsWith("Bearer ")) {
     // Extract the token
-    const token = authorizationHeader.substring(7);
+    const token = authorizationHeader.substring(7).split("/")[0];
 
-    try {
-      const tokenKey = process.env.CLOCKIN_TOKEN_CODE;
-      const decoded = jwt.verify(token, tokenKey);
-      if (decoded) {
-        req.user.attendanceId = decoded.id;
-        next();
-      }
-    } catch (e) {
-      next("Couldn't verify user clock-in token");
+    const tokenKey = process.env.CLOCKIN_TOKEN_CODE;
+
+    const decoded = jwt.verify(token, tokenKey);
+
+    if (decoded) {
+      console.log("check in confirmed..");
+      req.user = { attendanceId: decoded.id };
+      next();
     }
   } else {
     return res.status(401).send("Unauthorized access");
@@ -52,17 +51,14 @@ const verifyUserBreakToken = (req, res, next) => {
 
     if (authorizationHeader && authorizationHeader.startsWith("Bearer ")) {
       // Extract the token
-      const token = authorizationHeader.substring(7);
+      const token = authorizationHeader.substring(7).split("/")[1];
 
-      try {
-        const tokenKey = process.env.BREAK_TOKEN_CODE;
-        const decoded = jwt.verify(token, tokenKey);
-        if (decoded) {
-          req.user.breakTime = decoded.breakTime;
-          next();
-        }
-      } catch (e) {
-        next("couldn't verify token");
+      const tokenKey = process.env.BREAK_TOKEN_CODE;
+
+      const decoded = jwt.verify(token, tokenKey);
+
+      if (decoded) {
+        req.user = { ...req.user, breakStartTime: decoded.breakTime };
       }
     } else {
       return res.status(401).send("Unauthorized access");
@@ -80,17 +76,12 @@ const verifyUserOvertimeToken = (req, res, next) => {
 
     if (authorizationHeader && authorizationHeader.startsWith("Bearer ")) {
       // Extract the token
-      const token = authorizationHeader.substring(7);
+      const token = authorizationHeader.substring(7).split("/")[1];
 
-      try {
-        const tokenKey = process.env.OVERTIME_TOKEN_CODE;
-        const decoded = jwt.verify(token, tokenKey);
-        if (decoded) {
-          req.user.overtimeTime = decoded.overtimeTime;
-          next();
-        }
-      } catch (e) {
-        next("couldn't verify token");
+      const tokenKey = process.env.OVERTIME_TOKEN_CODE;
+      const decoded = jwt.verify(token, tokenKey);
+      if (decoded) {
+        req.user = { ...req.user, overtimeTime: decoded.overtimeTime };
       }
     } else {
       return res.status(401).send("Unauthorized access");

@@ -3,10 +3,11 @@ const { employeeDB } = require("../models/employeeDB");
 const { attendanceSummaryDB } = require("../models/attendanceSummaryDB");
 const { autoClockOutDB } = require("../models/autoClockOutDB");
 const asyncHandler = require("express-async-handler");
-const { verifyClockInToken } = require("../utils/verifyClockInToken");
+
 const { response } = require("express");
 const jwt = require("jsonwebtoken");
-const checkIfWeekend = require("../utils/checkIfWeekend");
+const { checkIfWeekend, getStartAndEndDatesOfWeek } = require("../utils/date");
+
 /**
  * @desc Get all attendance
  * @route Get/attendance
@@ -32,7 +33,24 @@ const getAttendance = asyncHandler(async (req, res) => {
         .type("json")
         .send({ msg: "No pending attendance found!" });
     }
-    return res.status(200).json(pendingAttendance);
+
+    const modifiedPendingAttendancePromises = pendingAttendance.map(
+      async (attendance) => {
+        const employee = await employeeDB.findById(attendance.userId);
+
+        return {
+          ...attendance,
+          username: employee.username,
+          firstname: employee.firstname,
+          lastname: employee.lastname,
+        };
+      }
+    );
+    const modifiedPendingAttendance = await Promise.all(
+      modifiedPendingAttendancePromises
+    );
+
+    return res.status(200).json(modifiedPendingAttendance);
   }
 
   res.status(200).json(attendances);
@@ -105,6 +123,63 @@ const getAttendanceById = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc Get attendance by date
+ * @route Get/attendance
+ * @access public
+ */
+
+const getAttendanceByDate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const { match: matchDate } = req.query;
+
+  if (matchDate) {
+    const targetDate = new Date(matchDate); // Set the target date
+
+    // Clear the time components to focus on the date only
+    targetDate.setHours(0, 0, 0, 0);
+
+    const attendance = await attendanceDB
+      .find({
+        userId: id,
+        clockInTime: {
+          $gte: targetDate, // Greater than or equal to the target date (start of day)
+          $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+        },
+      })
+      .lean();
+
+    if (!attendance.length) {
+      return res.status(400).type("json").send({ msg: "No attendance found!" });
+    }
+
+    return res.status(200).json(attendance);
+  }
+
+  console.log("called!");
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  const attendance = await attendanceDB
+    .find({
+      userId: id,
+      clockInTime: {
+        $gte: today, // Greater than or equal to the target date (start of day)
+        $lt: new Date(today.getTime() + 86400000), // Less than the next day (end of day)
+      },
+    })
+    .lean();
+
+  console.log(attendance, "attend");
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+  res.status(200).json(attendance);
+});
+
+/**
  * @desc clock in
  * @route Post /users
  * @access Private
@@ -146,13 +221,9 @@ const checkIn = asyncHandler(async (req, res) => {
 
 const checkOut = asyncHandler(async (req, res) => {
   const { clockOutTime } = req.body;
-  const authorizationHeader = req.headers.authorization;
-
-  const token = authorizationHeader.substring(7);
+  const attendanceId = req.user.attendanceId;
 
   try {
-    const attendanceId = verifyClockInToken(token).id;
-
     const attendance = await attendanceDB.findById(attendanceId).exec();
 
     if (!attendance) {
@@ -180,43 +251,83 @@ const checkOut = asyncHandler(async (req, res) => {
  * @route Post / user
  * @access Public
  */
-const startBreak = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { breakTime } = req.body;
-  const { mode } = req.query;
 
-  if (!id || !mode) {
-    return res.status(401).type("json").send({
-      msg: "Unauthorized failed. Require userId and mode",
-    });
+const startBreak = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { breakTime } = req.body;
+    const { mode } = req.query;
+
+    if (!id || !mode) {
+      return res.status(401).json({
+        msg: "Unauthorized failed. Require userId and mode",
+      });
+    }
+
+    const attendanceId = req.user.attendanceId;
+
+    const attendance = await attendanceDB
+      .find({ _id: attendanceId, userId: id })
+      .exec();
+
+    if (!attendance.length) {
+      return res.status(400).json({ msg: "No attendance found!" });
+    }
+
+    if (mode === "start") {
+      attendance[0].breakStartTime = breakTime;
+
+      const token = attendance[0].generateBreakAuthToken();
+      await attendance[0].save();
+
+      return res.status(200).json({
+        msg: "break started successful",
+        breakToken: token,
+      });
+    }
+
+    if (mode === "end") {
+      attendance[0].breakEndTime = breakTime;
+      await attendance[0].save();
+
+      return res.status(200).json({
+        msg: "break ended successful",
+      });
+    }
+  } catch (error) {
+    console.error("Error in startBreak:", error);
+
+    return res.status(500).json({ msg: "Internal Server Error" });
   }
-  const attendanceId = req.user.attendanceId;
+});
+
+const getWeeklyBreakByDate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const { date } = req.query;
+
+  if (!date) {
+    return res.status(401).type("json").send({ msg: "No date found!" });
+  }
+
+  const { start, end } = getStartAndEndDatesOfWeek(date);
 
   const attendance = await attendanceDB
-    .find({ _id: attendanceId, userId: id })
-    .exec();
+    .find({
+      userId: id,
+      breakStartTime: {
+        $gte: start,
+        $lt: end,
+      },
+      status: "confirmed",
+    })
+    .lean();
 
   if (!attendance.length) {
     return res.status(400).type("json").send({ msg: "No attendance found!" });
   }
 
-  if (mode === "start") {
-    attendance[0].breakStartTime = breakTime;
-    const token = attendance.generateBreakAuthToken();
-
-    return res.status(200).json({
-      msg: "break started successful",
-      breakToken: token,
-    });
-  }
-
-  if (mode === "end") {
-    attendance[0].breakEndTime = breakTime;
-
-    return res.status(200).json({
-      msg: "break ended successful",
-    });
-  }
+  res.status(200).json(attendance);
 });
 
 /**
@@ -225,50 +336,91 @@ const startBreak = asyncHandler(async (req, res) => {
  * @access Public
  */
 const startOvertime = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { overtimeTime } = req.body;
-  const { mode } = req.query;
+  try {
+    const { id } = req.params;
+    const { overtimeTime } = req.body;
+    const { mode } = req.query;
 
-  if (!id || !mode) {
-    return res.status(401).type("json").send({
-      msg: "Unauthorized failed. Require userId and mode",
-    });
+    if (!id || !mode) {
+      return res.status(401).type("json").send({
+        msg: "Unauthorized failed. Require userId and mode",
+      });
+    }
+    const attendanceId = req.user.attendanceId;
+
+    const attendance = await attendanceDB
+      .find({ _id: attendanceId, userId: id })
+      .exec();
+
+    if (!attendance.length) {
+      return res.status(400).type("json").send({ msg: "No attendance found!" });
+    }
+
+    if (mode === "start") {
+      attendance[0].overtimeStartTime = overtimeTime;
+      await attendance[0].save();
+
+      const token = attendance[0].generateOvertimeAuthToken();
+
+      return res.status(200).json({
+        msg: "overtime started successful",
+        overtimeToken: token,
+      });
+    }
+
+    if (mode === "end") {
+      attendance[0].overtimeEndTime = overtimeTime;
+      await attendance[0].save();
+
+      return res.status(200).json({
+        msg: "overtime ended successful",
+      });
+    }
+  } catch (error) {
+    console.error("Error in startBreak:", error);
+
+    return res.status(500).json({ msg: "Internal Server Error" });
   }
-  const attendanceId = req.user.attendanceId;
+});
+
+const getWeeklyOvertimeByDate = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const { date } = req.query;
+
+  if (!date) {
+    return res.status(401).type("json").send({ msg: "No date found!" });
+  }
+
+  const { start, end } = getStartAndEndDatesOfWeek(date);
 
   const attendance = await attendanceDB
-    .find({ _id: attendanceId, userId: id })
-    .exec();
+    .find({
+      userId: id,
+      overtimeStartTime: {
+        $gte: start,
+        $lt: end,
+      },
+      status: "confirmed",
+    })
+    .lean();
 
   if (!attendance.length) {
     return res.status(400).type("json").send({ msg: "No attendance found!" });
   }
 
-  if (mode === "start") {
-    attendance[0].overtimeStartTime = overtimeTime;
-    const token = attendance.generateOvertimeAuthToken();
-
-    return res.status(200).json({
-      msg: "break started successful",
-      breakToken: token,
-    });
-  }
-
-  if (mode === "end") {
-    attendance[0].overtimeEndTime = overtimeTime;
-  }
-
-  res.status(200).json({
-    msg: "break successful",
-  });
+  res.status(200).json(attendance);
 });
 
 module.exports = {
   getAttendance,
   checkIn,
+  getWeeklyBreakByDate,
+  getWeeklyOvertimeByDate,
   checkOut,
   getClockOutAttendanceById,
   startBreak,
+  getAttendanceByDate,
   startOvertime,
   getAttendanceById,
 };

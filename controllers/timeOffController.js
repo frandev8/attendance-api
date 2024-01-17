@@ -1,8 +1,7 @@
 const { timeOffDB, isTimeOffFormValid } = require("../models/timeOffDB");
 const { employeeDB } = require("../models/employeeDB");
 const asyncHandler = require("express-async-handler");
-const { verifyClockInToken } = require("../utils/verifyClockInToken");
-const { doesDepartEarly, doesArriveLate } = require("../utils/checkTimeStatus");
+const { doesDepartEarly, doesArriveLate } = require("../utils/date");
 const { response } = require("express");
 
 const getTimeOff = asyncHandler(async (req, res) => {
@@ -41,7 +40,12 @@ const getTimeOff = asyncHandler(async (req, res) => {
       async (timeOff) => {
         const employee = await employeeDB.findById(timeOff.userId);
 
-        return { ...timeOff, username: employee.username };
+        return {
+          ...timeOff,
+          username: employee.username,
+          firstname: employee.firstname,
+          lastname: employee.lastname,
+        };
       }
     );
     const modifiedPendingTimeOff = await Promise.all(
@@ -107,10 +111,34 @@ const createNewTimeOff = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc delete attendance
+ * @route Post /user
+ * @access Public
+ */
+
+const deleteTimeOff = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  try {
+    const timeOff = await timeOffDB.findById(id).lean();
+
+    if (!timeOff.length) {
+      return res.status(400).type("json").send({ msg: "No timeOff found!" });
+    }
+
+    const deletedTimeOff = await timeOffDB.deleteOne(id);
+
+    res.status(200).json({ msg: "TimeOff successfully deleted" });
+  } catch (e) {
+    console.log();
+  }
+});
+
+/**
  * @desc accept attendance
  * @route Post /admin
  * @access Private
  */
+
 const endorseTimeOff = asyncHandler(async (req, res) => {
   const { action } = req.query;
   const { timeOffId, adminId } = req.body;
@@ -151,6 +179,7 @@ const endorseTimeOff = asyncHandler(async (req, res) => {
 module.exports = {
   createNewTimeOff,
   endorseTimeOff,
+  deleteTimeOff,
   getTimeOff,
   getTimeOffById,
 };

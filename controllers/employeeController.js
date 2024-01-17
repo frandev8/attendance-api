@@ -5,6 +5,7 @@ const {
   loginValidate,
   registerValidatePhase2,
   registerValidatePhase1,
+  passwordValidate,
 } = require("../models/employeeDB");
 const mongoose = require("mongoose");
 require("mongoose-sequence")(mongoose);
@@ -349,6 +350,8 @@ const deleteEmployee = asyncHandler(async (req, res) => {
 const setEmployeeAvatar = asyncHandler(async (req, res) => {
   const { imgUrlBase64 } = req.body;
 
+  console.log(imgUrlBase64, "image url");
+
   const { id } = req.params;
 
   if (!id || !imgUrlBase64) {
@@ -422,7 +425,17 @@ const setEmployeeNewPassword = asyncHandler(async (req, res) => {
   }
 
   try {
-    const employee = await employeeDB.findById(id).select("-password").lean();
+    // confirm data
+    const { error } = passwordValidate({
+      old: formData.oldPassword,
+      new: formData.newPassword,
+    });
+
+    if (error) {
+      return res.status(401).json({ msg: error.details[0].message });
+    }
+
+    const employee = await employeeDB.findById(id).exec();
 
     if (!employee) {
       return res.status(401).type("json").send({ msg: "Users not found!" });

@@ -3,9 +3,9 @@ const { employeeDB } = require("../models/employeeDB");
 const { adminDB } = require("../models/adminDB");
 const { attendanceSummaryDB } = require("../models/attendanceSummaryDB");
 const asyncHandler = require("express-async-handler");
-const { verifyClockInToken } = require("../utils/verifyClockInToken");
-const { doesDepartEarly, doesArriveLate } = require("../utils/checkTimeStatus");
-const checkIfWeekend = require("../utils/checkIfWeekend");
+
+const { doesDepartEarly, doesArriveLate } = require("../utils/date");
+const { checkIfWeekend } = require("../utils/date");
 const { autoClockOutDB } = require("../models/autoClockOutDB");
 
 const getAttendance = asyncHandler(async (req, res) => {
@@ -139,10 +139,7 @@ const endorseAttendance = asyncHandler(async (req, res) => {
       return res.status(401).type("json").send({ msg: "Unauthorized admin" });
     }
 
-  
     if (action === "accept") {
-
-
       const attendanceSummary = await attendanceSummaryDB.create({
         adminId: admin._id,
         userId: employee._id,

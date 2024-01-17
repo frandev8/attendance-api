@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const joi = require("joi");
 const passwordComplexity = require("joi-password-complexity");
 const AutoIncrement = require("mongoose-sequence")(mongoose);
-const checkIfWeekend = require("../utils/checkIfWeekend");
+const { checkIfWeekend } = require("../utils/date");
 
 const attendanceSummarySchema = new mongoose.Schema({
   // adminId: {
