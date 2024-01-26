@@ -27,6 +27,8 @@ const getTimeOff = asyncHandler(async (req, res) => {
   }
 
   if (pending) {
+    console.log("start pending");
+
     const pendingTimeOff = await timeOffDB.find({ status: "pending" }).lean();
 
     if (!pendingTimeOff.length) {
@@ -51,6 +53,8 @@ const getTimeOff = asyncHandler(async (req, res) => {
     const modifiedPendingTimeOff = await Promise.all(
       modifiedPendingTimeOffPromises
     );
+
+    console.log("modi");
 
     return res.status(200).json(modifiedPendingTimeOff);
   }

@@ -254,9 +254,10 @@ const getAdminById = asyncHandler(async (req, res) => {
  */
 
 const setAdminAvatar = asyncHandler(async (req, res) => {
-  const { id, imgUrlBase64 } = req.body;
+  const { imgUrlBase64 } = req.body;
 
-  console.log(imgUrlBase64, "image url");
+  const { id } = req.params;
+
   if (!id || !imgUrlBase64) {
     return res.status(400).json({ msg: "must provide an id and img url" });
   }
@@ -293,8 +294,11 @@ const setAdminAvatar = asyncHandler(async (req, res) => {
 const getAdminAvatar = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  // console.log(id, "admin a");
   try {
     const admin = await adminDB.findById(id).select("-password").lean();
+
+    // console.log(admin);
 
     if (!admin) {
       return res.status(401).type("json").send({ msg: "admin not found!" });

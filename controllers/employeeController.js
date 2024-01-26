@@ -350,8 +350,6 @@ const deleteEmployee = asyncHandler(async (req, res) => {
 const setEmployeeAvatar = asyncHandler(async (req, res) => {
   const { imgUrlBase64 } = req.body;
 
-  console.log(imgUrlBase64, "image url");
-
   const { id } = req.params;
 
   if (!id || !imgUrlBase64) {

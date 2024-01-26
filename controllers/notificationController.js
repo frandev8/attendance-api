@@ -1,13 +1,13 @@
 const {
   notificationDB,
   isNotificationFormValid,
+  isEditNotificationFormValid,
 } = require("../models/notificationDB");
 const asyncHandler = require("express-async-handler");
-
+const { adminDB } = require("../models/adminDB");
 const getNotification = asyncHandler(async (req, res) => {
-
   const notification = await notificationDB.find({}).lean();
-  
+
   if (!notification.length) {
     return res.status(400).type("json").send({ msg: "No notification found!" });
   }
@@ -44,7 +44,6 @@ const createNewNotification = asyncHandler(async (req, res) => {
     });
 
     if (error) {
-    
       return res.status(404).json({ msg: error.details[0].message });
     }
 
@@ -71,7 +70,49 @@ const createNewNotification = asyncHandler(async (req, res) => {
  * @route Patch / admin
  * @access private
  */
-const editNotificationById = asyncHandler(async (req, res) => {});
+
+const editNotificationById = asyncHandler(async (req, res) => {
+  const { formData, adminId } = req.body;
+  const { id } = req.params;
+
+  const { title, message } = formData;
+
+  try {
+    const { error } = isEditNotificationFormValid({
+      title,
+      message,
+    });
+
+    if (error) {
+      return res.status(404).json({ msg: error.details[0].message });
+    }
+
+    // find notification
+    const notification = await notificationDB.findById(id).exec();
+
+    // find admin
+    const admin = await adminDB.findById(adminId);
+
+    if (!notification || !admin) {
+      return res
+        .status(400)
+        .type("json")
+        .send({ msg: "No notification or admin found!" });
+    }
+
+    notification.title = title;
+    notification.message = message;
+    await notification.save();
+
+    // success
+    res.status(201).json({
+      msg: `notification edited!`,
+    });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
+  }
+});
 
 /**
  * @desc delete notification
@@ -79,7 +120,30 @@ const editNotificationById = asyncHandler(async (req, res) => {});
  * @access private
  */
 
-const deleteNotificationById = asyncHandler(async (req, res) => {});
+const deleteNotificationById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // find notification
+    const notification = await notificationDB.findById(id).exec();
+
+    if (!notification) {
+      return res
+        .status(400)
+        .type("json")
+        .send({ msg: "No notification found!" });
+    }
+
+    await notification.delete();
+
+    res.status(200).json({
+      msg: `notification deleted!`,
+    });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
+  }
+});
 
 module.exports = {
   getNotificationById,

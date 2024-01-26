@@ -43,5 +43,13 @@ function isNotificationFormValid(data) {
 
   return schema.validate(data);
 }
+function isEditNotificationFormValid(data) {
+  const schema = joi.object({
+    title: joi.string().required().not().empty(),
+    message: joi.string().required().not().empty(),
+  });
 
-module.exports = { notificationDB, isNotificationFormValid };
+  return schema.validate(data);
+}
+
+module.exports = { notificationDB, isNotificationFormValid, isEditNotificationFormValid };

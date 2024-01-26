@@ -1,7 +1,9 @@
+const { adminDB } = require("../models/adminDB");
 const {
   announcementDB,
   isAnnouncementFormValid,
 } = require("../models/announcementDB");
+const { isEditNotificationFormValid } = require("../models/notificationDB");
 const asyncHandler = require("express-async-handler");
 
 const getAnnouncement = asyncHandler(async (req, res) => {
@@ -68,7 +70,49 @@ const createNewAnnouncement = asyncHandler(async (req, res) => {
  * @route Patch /admin
  * @access private
  */
-const editAnnouncementById = asyncHandler(async (req, res) => {});
+
+const editAnnouncementById = asyncHandler(async (req, res) => {
+  const { formData, adminId } = req.body;
+  const { id } = req.params;
+
+  const { title, message } = formData;
+
+  try {
+    const { error } = isEditNotificationFormValid({
+      title,
+      message,
+    });
+
+    if (error) {
+      return res.status(404).json({ msg: error.details[0].message });
+    }
+
+    // find announcement
+    const announcement = await announcementDB.findById(id).exec();
+
+    // find admin
+    const admin = await adminDB.findById(adminId);
+
+    if (!announcement || !admin) {
+      return res
+        .status(400)
+        .type("json")
+        .send({ msg: "No announcement or admin found!" });
+    }
+
+    announcement.title = title;
+    announcement.message = message;
+    await announcement.save();
+
+    // success
+    res.status(201).json({
+      msg: `announcement edited!`,
+    });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
+  }
+});
 
 /**
  * @desc delete announcement
@@ -76,7 +120,30 @@ const editAnnouncementById = asyncHandler(async (req, res) => {});
  * @access Private
  */
 
-const deleteAnnouncementById = asyncHandler(async (req, res) => {});
+const deleteAnnouncementById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // find announcement
+    const announcement = await announcementDB.findById(id).exec();
+
+    if (!announcement) {
+      return res
+        .status(400)
+        .type("json")
+        .send({ msg: "No announcement found!" });
+    }
+
+    await announcement.delete();
+
+    res.status(200).json({
+      msg: `announcement deleted!`,
+    });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
+  }
+});
 
 module.exports = {
   getAnnouncementById,

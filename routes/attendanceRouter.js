@@ -7,7 +7,7 @@ const {
   startOvertime,
   checkOut,
   getClockOutAttendanceById,
-
+  getClockInAttendance,
   getWeeklyOvertimeByDate,
   getWeeklyBreakByDate,
   getAttendanceById,
@@ -16,6 +16,7 @@ const {
 const {
   validateBreakTime,
   validateOvertimeTime,
+  validateClockInTime,
 } = require("../middleware/validateTime");
 const {
   verifyUserCheckinToken,
@@ -28,7 +29,7 @@ const attendanceRouter = Router();
 attendanceRouter.route("/").get(getAttendance);
 attendanceRouter.route("/:id").get(getAttendanceById);
 attendanceRouter.route("/date/:id").get(getAttendanceByDate);
-attendanceRouter.route("/clock-in/:id").post(checkIn);
+attendanceRouter.route("/clock-in/:id").get(getClockInAttendance).post(checkIn);
 attendanceRouter
   .route("/clock-out/:id")
   .patch(verifyUserCheckinToken, checkOut);
@@ -39,7 +40,7 @@ attendanceRouter
   .post(
     validateBreakTime,
     verifyUserCheckinToken,
-    validateOvertimeTime,
+    verifyUserBreakToken,
     startBreak
   );
 

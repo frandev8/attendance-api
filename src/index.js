@@ -12,8 +12,12 @@ const bodyParser = require("body-parser");
 const {
   markAttendanceAbsent,
   clockOutAttendance,
-} = require("../utils/markAttendance");
-const getNonClockOutAttendance = require("../utils/getNonClockOutAttendance");
+  getNonClockOutAttendance,
+  getNonEndBreakAttendance,
+  getNonEndOvertimeAttendance,
+  forceEndOvertimeAttendance,
+  forceEndBreakAttendance,
+} = require("../utils/attendance");
 
 require("dotenv").config();
 
@@ -34,9 +38,12 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/", require("../routes/root"));
-app.use("/banner", require("../routes/root"));
+app.use("/banner", require("../routes/banner"));
 
-// employee
+/**
+ * @section Employee network
+ */
+
 app.use(
   "/employee/attendance",
   // verifyUserLoginToken,
@@ -48,8 +55,12 @@ app.use("/employee/announcement", require("../routes/announcementRouter"));
 app.use("/employee", require("../routes/employeeRouter"));
 // app.use("/employee/attendance", verifyUserLoginToken);
 
+/**
+ * @section Cron Jobs
+ */
+
 // Mark employee as late at 10:30 am every day if not clocked in
-// cron.schedule("09 1 * * *", async () => {
+// cron.schedule("30 10 * * *", async () => {
 //   // Get the list of all employees (activates employees)
 //   markAttendanceAbsent();
 
@@ -57,14 +68,32 @@ app.use("/employee", require("../routes/employeeRouter"));
 // });
 
 // clock out every employee after 5:30 pm every day if they're not clocked out
-// cron.schedule("29 13 * * *", async () => {
-//   // Get the list of all attendance (not clocked out)
-//   const nonClockedOutAttendance = await getNonClockOutAttendance();
+cron.schedule("40 23 * * *", async () => {
+  // Get the list of all attendance (not clocked out)
+  const nonClockedOutAttendance = await getNonClockOutAttendance();
 
-//   clockOutAttendance(nonClockedOutAttendance);
-// });
+  clockOutAttendance(nonClockedOutAttendance);
+});
 
-// app.use("/admin/confirm-attendance", verifyAdminLoginToken);
+// Force end break attendance
+cron.schedule("30 23 * * *", async () => {
+  // Get the list of all attendance (not clocked out)
+  const nonEndBreakAttendance = await getNonEndBreakAttendance();
+
+  forceEndBreakAttendance(nonEndBreakAttendance);
+});
+
+// Force end overtime attendance
+cron.schedule("50 23 * * *", async () => {
+  // Get the list of all attendance (not clocked out)
+  const nonEndOvertimeAttendance = await getNonEndOvertimeAttendance();
+
+  forceEndOvertimeAttendance(nonEndOvertimeAttendance);
+});
+
+/**
+ * @section Admin
+ */
 
 // load attendance
 app.use(
@@ -83,7 +112,6 @@ app.use("/admin/notification", require("../routes/notificationRouter"));
 
 // announcement
 app.use("/admin/announcement", require("../routes/announcementRouter"));
-// app.use("/admin/confirm-attendance", verifyLoginToken);
 
 // admin
 app.use("/admin/", require("../routes/adminRouter"));

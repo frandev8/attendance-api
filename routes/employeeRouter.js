@@ -18,7 +18,6 @@ const {
 
 const employeeRouter = Router();
 
-employeeRouter.route("/").get(getEmployee);
 // employeeRouter.route("/activated").get(getActivatedEmployee);
 employeeRouter.route("/:id").get(getEmployeeById);
 // employeeRouter.route("/personal/:id").get(getPersonalDetails);
@@ -33,5 +32,6 @@ employeeRouter
   .get(getEmployeeAvatar)
   .post(setEmployeeAvatar);
 employeeRouter.route("/verify/:id/:token").get(verifyEmployee);
+employeeRouter.route("/").get(getEmployee);
 
 module.exports = employeeRouter;

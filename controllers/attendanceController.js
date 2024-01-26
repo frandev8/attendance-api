@@ -156,7 +156,6 @@ const getAttendanceByDate = asyncHandler(async (req, res) => {
     return res.status(200).json(attendance);
   }
 
-  console.log("called!");
   const today = new Date();
 
   today.setHours(0, 0, 0, 0);
@@ -170,8 +169,6 @@ const getAttendanceByDate = asyncHandler(async (req, res) => {
       },
     })
     .lean();
-
-  console.log(attendance, "attend");
 
   if (!attendance.length) {
     return res.status(400).type("json").send({ msg: "No attendance found!" });
@@ -211,6 +208,32 @@ const checkIn = asyncHandler(async (req, res) => {
     console.log(e.message);
     res.status(500).json({ msg: "internal server error" });
   }
+});
+
+const getClockInAttendance = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const today = new Date();
+
+  today.setHours(0, 0, 0, 0);
+
+  const attendance = await attendanceDB
+    .find({
+      userId: id,
+      clockInTime: {
+        $gte: today, // Greater than or equal to the target date (start of day)
+        $lt: new Date(today.getTime() + 86400000), // Less than the next day (end of day)
+      },
+      clockOutTime: { $eq: null },
+      status: { $eq: "pending" },
+    })
+    .lean();
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  res.status(200).json(attendance);
 });
 
 /**
@@ -253,6 +276,8 @@ const checkOut = asyncHandler(async (req, res) => {
  */
 
 const startBreak = asyncHandler(async (req, res) => {
+  console.log("starting break!");
+
   try {
     const { id } = req.params;
     const { breakTime } = req.body;
@@ -283,6 +308,7 @@ const startBreak = asyncHandler(async (req, res) => {
       return res.status(200).json({
         msg: "break started successful",
         breakToken: token,
+        breakTime: attendance[0].breakStartTime,
       });
     }
 
@@ -422,5 +448,6 @@ module.exports = {
   startBreak,
   getAttendanceByDate,
   startOvertime,
+  getClockInAttendance,
   getAttendanceById,
 };

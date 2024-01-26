@@ -11,6 +11,7 @@ const verifyUserLoginToken = (req, res, next) => {
       const tokenKey = process.env.TOKEN_SECRET;
       const decoded = jwt.verify(token, tokenKey);
       if (decoded) {
+        console.log("next called!");
         req.user = decoded;
         next();
       }
@@ -64,6 +65,7 @@ const verifyUserBreakToken = (req, res, next) => {
       return res.status(401).send("Unauthorized access");
     }
   }
+  console.log("next next called!");
 
   next();
 };
