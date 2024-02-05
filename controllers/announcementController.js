@@ -134,7 +134,7 @@ const deleteAnnouncementById = asyncHandler(async (req, res) => {
         .send({ msg: "No announcement found!" });
     }
 
-    await announcement.delete();
+    await announcement.deleteOne();
 
     res.status(200).json({
       msg: `announcement deleted!`,

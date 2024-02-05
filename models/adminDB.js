@@ -100,9 +100,29 @@ function registerValidatePhase1(data) {
   return schema.validate(data);
 }
 
+function personalFormValidate(data) {
+  const schema = joi.object({
+    username: joi.string().min(3).max(30).required().label("username"),
+    email: joi
+      .string()
+      .email({
+        minDomainSegments: 2,
+        tlds: { allow: ["com", "net"] },
+      })
+      .label("email")
+      .required(),
+    firstname: joi.string().min(3).required().label("firstname"),
+    lastname: joi.string().label("lastname"),
+    phone: joi.string().required().min(9).max(14).label("phone"),
+  });
+
+  return schema.validate(data);
+}
+
 module.exports = {
   adminDB,
   loginValidate,
   registerValidatePhase1,
   registerValidatePhase2,
+  personalFormValidate,
 };

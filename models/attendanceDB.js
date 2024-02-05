@@ -37,6 +37,15 @@ attendanceSchema.methods.generateCheckinAuthToken = function () {
   return token;
 };
 
+attendanceSchema.methods.generateCheckOutAuthToken = function () {
+  const token = jwt.sign(
+    { userId: this.userId, id: this._id },
+    process.env.CLOCKOUT_TOKEN_CODE
+  );
+
+  return token;
+};
+
 attendanceSchema.methods.generateBreakAuthToken = function () {
   const token = jwt.sign(
     { breakTime: this.breakStartTime, id: this._id },

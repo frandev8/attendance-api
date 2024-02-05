@@ -123,6 +123,8 @@ const editNotificationById = asyncHandler(async (req, res) => {
 const deleteNotificationById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  console.log(id);
+
   try {
     // find notification
     const notification = await notificationDB.findById(id).exec();
@@ -134,7 +136,7 @@ const deleteNotificationById = asyncHandler(async (req, res) => {
         .send({ msg: "No notification found!" });
     }
 
-    await notification.delete();
+    await notification.deleteOne();
 
     res.status(200).json({
       msg: `notification deleted!`,

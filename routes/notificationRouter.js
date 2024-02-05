@@ -9,10 +9,12 @@ const {
 
 const notificationRouter = Router();
 
-notificationRouter.route("/").get(getNotification).post(createNewNotification);
+notificationRouter
+  .route("/:id")
+  .get(getNotificationById)
+  .delete(deleteNotificationById)
+  .patch(editNotificationById);
 
-notificationRouter.route("/:id").get(getNotificationById);
-notificationRouter.route("/:id").patch(editNotificationById);
-notificationRouter.route("/:id").delete(deleteNotificationById);
+notificationRouter.route("/").get(getNotification).post(createNewNotification);
 
 module.exports = notificationRouter;

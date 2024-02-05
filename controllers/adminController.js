@@ -5,15 +5,16 @@ const {
   loginValidate,
   registerValidatePhase2,
   registerValidatePhase1,
+  personalFormValidate,
 } = require("../models/adminDB");
 const mongoose = require("mongoose");
 require("mongoose-sequence")(mongoose);
 const { randomBytes } = require("crypto");
 const tokenDB = require("../models/tokenDB");
-const adminVerifyDB = require("../models/verifyAdminLoginDB");
-const sendEmail = require("../utils/sendEmail");
+const { sendActivationEmail } = require("../utils/sendEmail");
 const { avatarDB } = require("../models/avatarDB");
 const { passwordValidate } = require("../models/employeeDB");
+const { generateRand5Digit } = require("../utils/gc");
 
 /**
  * @desc Login users
@@ -122,15 +123,27 @@ const createNewAdmin = asyncHandler(async (req, res) => {
     });
 
     // create new employee
-    const adminVerificationToken = await adminVerifyDB.create({
+    const adminVerificationToken = await tokenDB.create({
       owner: newAdmin._id,
       token: randomBytes(32).toString("hex"),
+      pin: generateRand5Digit(),
     });
 
     // eslint-disable-next-line no-undef
     const message = `${process.env.BASE_URL}/admin/auth/verify/${newAdmin._id}/${adminVerificationToken.token}`;
 
-    await sendEmail(newAdmin.email, "Please verify email", message);
+    const activationLink = `${process.env.BASE_URL}/auth/register/admin/verify/${newAdmin._id}/${adminVerificationToken.token}?mode=auto&pin=${adminVerificationToken.pin}`;
+
+    const activationPageLink = `${process.env.BASE_URL}/auth/register/admin/verify/${newAdmin._id}/${adminVerificationToken.token}`;
+
+    const clientInfo = { firstname: newAdmin.firstname, email: newAdmin.email };
+
+    await sendActivationEmail(
+      activationPageLink,
+      activationLink,
+      clientInfo,
+      adminVerificationToken.pin
+    );
 
     // success
     res.status(201).json({
@@ -186,25 +199,91 @@ const checkAdminDuplicate = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc update admin
+ * @route PATCH /admin
+ * @access Private
+ */
+const updateAdminProfile = asyncHandler(async (req, res) => {
+  const { formData, mutatedFields } = req.body;
+
+  const { username, email, phone, firstname, lastname } = formData;
+  const { id } = req.params;
+
+  try {
+    // confirm data
+    const { error } = personalFormValidate({
+      username,
+      email,
+      phone,
+      firstname,
+      lastname,
+    });
+    if (error) {
+      return res.status(401).json({ msg: error.details[0].message });
+    }
+
+    const admin = await adminDB.findById(id);
+
+    if (!admin) {
+      return res.status(400).json({ msg: `couldn't find admin` });
+    }
+
+    const query = {};
+
+    // Create query conditions for fields with boolean value true, except "lastname" and "firstname"
+    for (const [field, isTrue] of Object.entries(mutatedFields)) {
+      if (isTrue && field !== "lastname" && field !== "firstname") {
+        query[field] = formData[field];
+      }
+    }
+
+    // check for duplication
+    const duplication = await adminDB.find(query).exec();
+
+    if (
+      duplication.length &&
+      duplication.some((admin) => admin?._id.toString() !== id)
+    ) {
+      return res
+        .status(409)
+        .json({ msg: `Profile already taken, choose another` });
+    }
+    admin.username = username;
+    admin.phone = phone;
+    admin.lastname = lastname;
+    admin.firstname = firstname;
+    admin.email = email;
+
+    console.log(admin, "updated");
+    await admin.save();
+
+    res.status(200).json({ msg: `${admin.username} updated successfully` });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
+  }
+});
+
+/**
  * @desc  verify user email
  * @route POST / users
  * @access Private
  */
-const verifyAdminMail = asyncHandler(async (req, res) => {
-  const { id, token } = req.params;
+const verifyAdminRegistration = asyncHandler(async (req, res) => {
+  const { id, token, pin } = req.params;
 
   try {
     const admin = await adminDB.findById(id).lean();
 
-    if (!admin) {
+    if (!token || !pin || !admin) {
       return res
         .status(400)
         .type("json")
         .send({ msg: "invalid link, try again" });
     }
 
-    const adminVerificationToken = await adminVerifyDB
-      .findOne({ owner: admin._id, token })
+    const adminVerificationToken = await tokenDB
+      .findOne({ owner: admin._id, token, pin })
       .lean();
 
     if (!adminVerificationToken) {
@@ -367,9 +446,10 @@ const setAdminNewPassword = asyncHandler(async (req, res) => {
 module.exports = {
   loginAdmin,
   createNewAdmin,
-  verifyAdminMail,
+  verifyAdminRegistration,
   checkAdminDuplicate,
   getAdminById,
+  updateAdminProfile,
   setAdminNewPassword,
   getAdminAvatar,
   setAdminAvatar,

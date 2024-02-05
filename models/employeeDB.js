@@ -119,11 +119,33 @@ function registerValidatePhase2(data) {
       })
       .label("email")
       .required(),
-    password: passwordComplexity(undefined, "password").required(),
+    password: passwordComplexity(
+      passwordComplexityOptions,
+      "password"
+    ).required(),
     firstname: joi.string().min(3).required().label("firstname"),
     lastname: joi.string().label("lastname"),
     phone: joi.string().required().min(9).max(14).label("phone"),
     role: joi.string().required().label("role").valid("employee"),
+  });
+
+  return schema.validate(data);
+}
+
+function personalFormValidate(data) {
+  const schema = joi.object({
+    username: joi.string().min(3).max(30).required().label("username"),
+    email: joi
+      .string()
+      .email({
+        minDomainSegments: 2,
+        tlds: { allow: ["com", "net"] },
+      })
+      .label("email")
+      .required(),
+    firstname: joi.string().min(3).required().label("firstname"),
+    lastname: joi.string().label("lastname"),
+    phone: joi.string().required().min(9).max(14).label("phone"),
   });
 
   return schema.validate(data);
@@ -135,4 +157,5 @@ module.exports = {
   registerValidatePhase1,
   registerValidatePhase2,
   passwordValidate,
+  personalFormValidate,
 };

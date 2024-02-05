@@ -1,11 +1,15 @@
 const { timeOffDB, isTimeOffFormValid } = require("../models/timeOffDB");
 const { employeeDB } = require("../models/employeeDB");
 const asyncHandler = require("express-async-handler");
-const { doesDepartEarly, doesArriveLate } = require("../utils/date");
+const {
+  doesDepartEarly,
+  doesArriveLate,
+  filterDateByRange,
+} = require("../utils/date");
 const { response } = require("express");
 
 const getTimeOff = asyncHandler(async (req, res) => {
-  const { accepted, pending } = req.query;
+  const { accepted, pending, filter: filteredDate } = req.query;
 
   const timeOff = await timeOffDB.find().lean();
 
@@ -14,21 +18,42 @@ const getTimeOff = asyncHandler(async (req, res) => {
   }
 
   if (accepted) {
-    const approvedTimeOff = await timeOffDB.find({ status: "approved" }).lean();
+    const targetDate = new Date(filteredDate); // Set the target date
+
+    targetDate.setHours(0, 0, 0, 0);
+
+    const approvedTimeOff = await timeOffDB.find({ status: "approved" }).exec();
 
     if (!approvedTimeOff.length) {
-      return res
-        .status(400)
-        .type("json")
-        .send({ msg: "No approved time-off found!" });
+      return res.status(400).type("json").send({ msg: "No time-off found!" });
     }
 
-    return res.status(200).json(approvedTimeOff);
+    const filterTimeOffPromise = filterDateByRange(
+      approvedTimeOff,
+      targetDate,
+      "startDate",
+      "endDate"
+    );
+
+    const filterTimeOff = await Promise.all(filterTimeOffPromise);
+
+    const adjustFilterTimeOffPromise = filterTimeOff.map(async (timeOff) => {
+      const employee = await employeeDB.findById(timeOff.userId);
+      // const avatar = await avatarDB.findOne({ clientId: timeOff.userId });
+
+      return {
+        ...timeOff,
+        firstname: employee?.firstname,
+        // avatarUrl: avatar ? avatar?.myFile : undefined,
+      };
+    });
+
+    const adjustFilterTimeOff = await Promise.all(adjustFilterTimeOffPromise);
+
+    return res.status(200).json(adjustFilterTimeOff);
   }
 
   if (pending) {
-    console.log("start pending");
-
     const pendingTimeOff = await timeOffDB.find({ status: "pending" }).lean();
 
     if (!pendingTimeOff.length) {
@@ -44,9 +69,9 @@ const getTimeOff = asyncHandler(async (req, res) => {
 
         return {
           ...timeOff,
-          username: employee.username,
-          firstname: employee.firstname,
-          lastname: employee.lastname,
+          username: employee?.username,
+          firstname: employee?.firstname,
+          lastname: employee?.lastname,
         };
       }
     );
@@ -54,9 +79,45 @@ const getTimeOff = asyncHandler(async (req, res) => {
       modifiedPendingTimeOffPromises
     );
 
-    console.log("modi");
-
     return res.status(200).json(modifiedPendingTimeOff);
+  }
+
+  if (filteredDate) {
+    const targetDate = new Date(filteredDate); // Set the target date
+
+    const approvedTimeOff = await timeOffDB.find({ status: "approved" }).exec();
+
+    if (!approvedTimeOff.length) {
+      return res.status(400).type("json").send({ msg: "No time-off found!" });
+    }
+
+    console.log("target date", targetDate);
+
+    const filterTimeOffPromise = filterDateByRange(
+      approvedTimeOff,
+      targetDate,
+      "startDate",
+      "endDate"
+    );
+
+    const filterTimeOff = await Promise.all(filterTimeOffPromise);
+
+    console.log(filterTimeOff, "filtered time-Off", approvedTimeOff);
+
+    const adjustFilterTimeOffPromise = filterTimeOff.map(async (timeOff) => {
+      const employee = await employeeDB.findById(timeOff.userId);
+      // const avatar = await avatarDB.findOne({ clientId: timeOff.userId });
+
+      return {
+        ...timeOff,
+        firstname: employee?.firstname,
+        // avatarUrl: avatar ? avatar?.myFile : undefined,
+      };
+    });
+
+    const adjustFilterTimeOff = await Promise.all(adjustFilterTimeOffPromise);
+
+    return res.status(200).json(adjustFilterTimeOff);
   }
 
   res.status(200).json(timeOff);

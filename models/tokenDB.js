@@ -10,6 +10,11 @@ const tokenSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  pin: {
+    type: String,
+    required: true,
+    
+  },
   createdAt: {
     type: Date,
     expires: 3600, // expires in an hour

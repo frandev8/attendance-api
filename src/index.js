@@ -38,7 +38,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.use("/", require("../routes/root"));
-app.use("/banner", require("../routes/banner"));
+app.use("/media", require("../routes/mediaRouter"));
 
 /**
  * @section Employee network
@@ -60,15 +60,15 @@ app.use("/employee", require("../routes/employeeRouter"));
  */
 
 // Mark employee as late at 10:30 am every day if not clocked in
-// cron.schedule("30 10 * * *", async () => {
-//   // Get the list of all employees (activates employees)
-//   markAttendanceAbsent();
+cron.schedule("30 10 * * *", async () => {
+  // Get the list of all employees (activates employees)
+  markAttendanceAbsent();
 
-//   // markAbsent(activatedEmployees);
-// });
+  // markAbsent(activatedEmployees);
+});
 
 // clock out every employee after 5:30 pm every day if they're not clocked out
-cron.schedule("40 23 * * *", async () => {
+cron.schedule("00 17 * * *", async () => {
   // Get the list of all attendance (not clocked out)
   const nonClockedOutAttendance = await getNonClockOutAttendance();
 
@@ -76,7 +76,7 @@ cron.schedule("40 23 * * *", async () => {
 });
 
 // Force end break attendance
-cron.schedule("30 23 * * *", async () => {
+cron.schedule("00 15 * * *", async () => {
   // Get the list of all attendance (not clocked out)
   const nonEndBreakAttendance = await getNonEndBreakAttendance();
 
@@ -84,7 +84,7 @@ cron.schedule("30 23 * * *", async () => {
 });
 
 // Force end overtime attendance
-cron.schedule("50 23 * * *", async () => {
+cron.schedule("00 19 * * *", async () => {
   // Get the list of all attendance (not clocked out)
   const nonEndOvertimeAttendance = await getNonEndOvertimeAttendance();
 

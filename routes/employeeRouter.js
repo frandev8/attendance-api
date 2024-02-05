@@ -3,15 +3,15 @@ const {
   getEmployee,
   getEmployeeById,
   createNewEmployee,
-  updateEmployee,
+  updateEmployeeProfile,
   deleteEmployee,
   loginEmployee,
   getEmployeeAvatar,
   setEmployeeAvatar,
-  verifyEmployee,
+  verifyEmployeeRegistration,
   setEmployeeNewPassword,
-  // getPersonalDetails,
   checkEmployeeDuplicate,
+  toggleEmployeeActivation,
   // getActivatedEmployee,
   // registerUser,
 } = require("../controllers/employeeController");
@@ -19,19 +19,24 @@ const {
 const employeeRouter = Router();
 
 // employeeRouter.route("/activated").get(getActivatedEmployee);
-employeeRouter.route("/:id").get(getEmployeeById);
-// employeeRouter.route("/personal/:id").get(getPersonalDetails);
+employeeRouter.route("/:id").get(getEmployeeById).delete(deleteEmployee);
+employeeRouter.route("/personal/:id").patch(updateEmployeeProfile);
+
 employeeRouter.route("/login").post(loginEmployee);
-employeeRouter.route("/edit").patch(updateEmployee);
-employeeRouter.route("/delete").delete(deleteEmployee);
-employeeRouter.route("/register").post(createNewEmployee);
+
+employeeRouter.route("/toggle-activeness/:id").patch(toggleEmployeeActivation);
+
+employeeRouter
+  .route("/register/verify/:id/:token/:pin")
+  .get(verifyEmployeeRegistration);
 employeeRouter.route("/register/duplicate").post(checkEmployeeDuplicate);
+employeeRouter.route("/register").post(createNewEmployee);
+
 employeeRouter.route("/password/:id").patch(setEmployeeNewPassword);
 employeeRouter
   .route("/avatar/:id")
   .get(getEmployeeAvatar)
   .post(setEmployeeAvatar);
-employeeRouter.route("/verify/:id/:token").get(verifyEmployee);
 employeeRouter.route("/").get(getEmployee);
 
 module.exports = employeeRouter;

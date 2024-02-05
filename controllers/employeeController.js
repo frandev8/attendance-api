@@ -6,13 +6,19 @@ const {
   registerValidatePhase2,
   registerValidatePhase1,
   passwordValidate,
+  personalFormValidate,
 } = require("../models/employeeDB");
 const mongoose = require("mongoose");
 require("mongoose-sequence")(mongoose);
 const { randomBytes } = require("crypto");
 const tokenDB = require("../models/tokenDB");
-const sendEmail = require("../utils/sendEmail");
+const { sendActivationEmail } = require("../utils/sendEmail");
 const { avatarDB } = require("../models/avatarDB");
+const { attendanceSummaryDB } = require("../models/attendanceSummaryDB");
+const { autoClockOutDB } = require("../models/autoClockOutDB");
+const { generateRand5Digit } = require("../utils/gc");
+const { attendanceDB } = require("../models/attendanceDB");
+const { timeOffDB } = require("../models/timeOffDB");
 
 /**
  * @desc Login users
@@ -34,19 +40,19 @@ const loginEmployee = asyncHandler(async (req, res) => {
       return res
         .status(401)
         .type("json")
-        .send({ msg: "invalid username or password" });
+        .send({ msg: "Invalid username or password, try again." });
     }
 
     if (!doHashPwdMatch(password, employee.password)) {
       return res
         .status(401)
         .type("json")
-        .send({ msg: "password doesn't match, try again" });
+        .send({ msg: "Invalid username or password, try again." });
     }
 
     if (!employee.activate) {
       return res.status(400).type("json").send({
-        msg: "please verify your account. Check your email.",
+        msg: "Please activate your account.",
       });
     }
 
@@ -172,11 +178,23 @@ const createNewEmployee = asyncHandler(async (req, res) => {
     const employeeToken = await tokenDB.create({
       owner: employee._id,
       token: randomBytes(32).toString("hex"),
+      pin: generateRand5Digit(),
     });
 
     const message = `${process.env.BASE_URL}/auth/verify/user/${employee._id}/${employeeToken.token}`;
 
-    await sendEmail(employee.email, "Please verify email", message);
+    const activationLink = `${process.env.BASE_URL}/auth/register/user/verify/${employee._id}/${employeeToken.token}?mode=auto&pin=${employeeToken.pin}`;
+
+    const activationPageLink = `${process.env.BASE_URL}/auth/register/user/verify/${employee._id}/${employeeToken.token}`;
+
+    const clientInfo = { firstname: employee.firstname, email: employee.email };
+
+    await sendActivationEmail(
+      activationPageLink,
+      activationLink,
+      clientInfo,
+      employeeToken.pin
+    );
 
     // success
     res.status(201).json({
@@ -241,13 +259,13 @@ const checkEmployeeDuplicate = asyncHandler(async (req, res) => {
  * @route POST / users
  * @access Private
  */
-const verifyEmployee = asyncHandler(async (req, res) => {
-  const { id, token } = req.params;
+const verifyEmployeeRegistration = asyncHandler(async (req, res) => {
+  const { id, token, pin } = req.params;
 
   try {
     const employee = await employeeDB.findById(id).lean();
 
-    if (!employee) {
+    if (!token || !pin || !employee) {
       return res
         .status(400)
         .type("json")
@@ -255,7 +273,7 @@ const verifyEmployee = asyncHandler(async (req, res) => {
     }
 
     const employeeToken = await tokenDB
-      .findOne({ owner: employee._id, token })
+      .findOne({ owner: employee._id, token, pin })
       .lean();
 
     if (!employeeToken) {
@@ -286,37 +304,92 @@ const verifyEmployee = asyncHandler(async (req, res) => {
  * @route PATCH /users
  * @access Private
  */
-const updateEmployee = asyncHandler(async (req, res) => {
-  const { id, username, password, contact } = req.body;
+const updateEmployeeProfile = asyncHandler(async (req, res) => {
+  const { formData, mutatedFields } = req.body;
 
-  // confirm data
-  if (!id || !username) {
-    return res.status(400).json({ msg: `all fields are required` });
+  const { username, email, phone, firstname, lastname } = formData;
+  const { id } = req.params;
+
+  try {
+    // confirm data
+    const { error } = personalFormValidate({
+      username,
+      email,
+      phone,
+      firstname,
+      lastname,
+    });
+    if (error) {
+      return res.status(401).json({ msg: error.details[0].message });
+    }
+
+    const employee = await employeeDB.findById(id);
+
+    if (!employee) {
+      return res.status(400).json({ msg: `couldn't find employee` });
+    }
+
+    const query = {};
+
+    // Create query conditions for fields with boolean value true, except "lastname" and "firstname"
+    for (const [field, isTrue] of Object.entries(mutatedFields)) {
+      if (isTrue && field !== "lastname" && field !== "firstname") {
+        query[field] = formData[field];
+      }
+    }
+
+    // check for duplication
+    const duplication = await employeeDB.find(query).exec();
+
+    if (
+      duplication.length &&
+      duplication.some((employee) => employee?._id.toString() !== id)
+    ) {
+      return res
+        .status(409)
+        .json({ msg: `Profile already taken, choose another` });
+    }
+    employee.username = username;
+    employee.phone = phone;
+    employee.lastname = lastname;
+    employee.firstname = firstname;
+    employee.email = email;
+
+    console.log(employee, "updated");
+    await employee.save();
+
+    res.status(200).json({ msg: `${employee.username} updated successfully` });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
   }
+});
 
-  const employee = await employeeDB.findById(id);
+const toggleEmployeeActivation = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-  if (!employee) {
-    return res.status(400).json({ msg: `couldn't find employee` });
+  const { action } = req.query;
+
+  try {
+    const employee = await employeeDB.findById(id);
+
+    if (!employee) {
+      return res.status(400).json({ msg: `couldn't find employee` });
+    }
+
+    if (action && action === "activate") {
+      employee.activate = true;
+    } else if (action === "deactivate") {
+      employee.activate = false;
+    }
+
+    await employee.save();
+
+    res.status(200).json({ msg: `${employee.username} updated successfully` });
+  } catch (e) {
+    console.log(e.message);
+    res.status(500).json({ msg: "internal server error" });
   }
-  // check for duplication
-  const duplication = await employeeDB.findOne({ username }).lean().exec();
-
-  if (duplication && duplication?._id.toString() !== id) {
-    return res
-      .status(409)
-      .json({ msg: `username already exist, choose another` });
-  }
-  employee.username = username;
-  employee.contact = contact;
-
-  if (password) {
-    employee.password = hashPwd(password);
-  }
-
-  const updatedUser = await employee.save();
-
-  res.status(201).json({ msg: `${updatedUser.username} updated successfully` });
 });
 
 /**
@@ -331,14 +404,20 @@ const deleteEmployee = asyncHandler(async (req, res) => {
     return res.status(400).json({ msg: "must provide an id" });
   }
 
-  const user = await user.findById(id).exec();
+  const user = await employeeDB.findById(id).exec();
 
   if (!user) {
-    return res.status(400).json({ msg: "user not found" });
+    return res.status(400).json({ msg: "employee not found" });
   }
-  const result = await user.deleteOne();
 
-  res.status(200).json({ msg: `${result.username} deleted successfully` });
+  user.remove();
+  await attendanceDB.deleteMany({ userId: id });
+  await attendanceSummaryDB.deleteMany({ userId: id });
+  await timeOffDB.deleteMany({ userId: id });
+  await avatarDB.deleteOne({ clientId: id });
+  await autoClockOutDB.deleteMany({ userId: id });
+
+  res.status(200).json({ msg: `${user.username} deleted successfully` });
 });
 
 /**
@@ -459,13 +538,14 @@ module.exports = {
   getEmployee,
   getEmployeeById,
   createNewEmployee,
-  updateEmployee,
+  updateEmployeeProfile,
   checkEmployeeDuplicate,
   deleteEmployee,
   loginEmployee,
   setEmployeeNewPassword,
   getEmployeeAvatar,
+  toggleEmployeeActivation,
   setEmployeeAvatar,
   // getPersonalDetails,
-  verifyEmployee,
+  verifyEmployeeRegistration,
 };

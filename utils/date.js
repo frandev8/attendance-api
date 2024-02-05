@@ -1,6 +1,6 @@
 const { isWeekend } = require("date-fns");
+const moment = require("moment");
 const { isAfter, isBefore, set, startOfWeek, endOfWeek } = require("date-fns");
-
 
 const doesDepartEarly = (departTime) => {
   // Set the specific time (in this case, 10:00 AM)
@@ -58,7 +58,27 @@ const getStartAndEndDatesOfWeek = (date) => {
   };
 };
 
+const filterDateByRange = function (
+  data,
+  targetDate,
+  startField = "startDate",
+  endField = "endDate"
+) {
+  const targetDateMoment = moment(targetDate);
 
+  return data.filter((item) => {
+    const startDateMoment = moment(item[startField]);
+    const endDateMoment = moment(item[endField]);
+
+    // Check if the target date falls within the closed range (inclusive of both ends)
+    return targetDateMoment.isBetween(
+      startDateMoment,
+      endDateMoment,
+      null,
+      "[]"
+    );
+  });
+};
 
 module.exports = {
   checkIfWeekend,
@@ -66,4 +86,5 @@ module.exports = {
   doesArriveLate,
   isAbsent,
   getStartAndEndDatesOfWeek,
+  filterDateByRange,
 };

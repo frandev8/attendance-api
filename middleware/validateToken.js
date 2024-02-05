@@ -44,6 +44,27 @@ const verifyUserCheckinToken = (req, res, next) => {
   }
 };
 
+const verifyUserCheckoutToken = (req, res, next) => {
+  const authorizationHeader = req.headers.authorization;
+
+  if (authorizationHeader && authorizationHeader.startsWith("Bearer ")) {
+    // Extract the token
+    const token = authorizationHeader.substring(7).split("/")[0];
+
+    const tokenKey = process.env.CLOCKOUT_TOKEN_CODE;
+
+    const decoded = jwt.verify(token, tokenKey);
+
+    if (decoded) {
+      console.log("check out confirmed..");
+      req.user = { attendanceId: decoded.id };
+      next();
+    }
+  } else {
+    return res.status(401).send("Unauthorized access");
+  }
+};
+
 const verifyUserBreakToken = (req, res, next) => {
   const { mode } = req.query;
 
@@ -118,6 +139,7 @@ const verifyAdminLoginToken = (req, res, next) => {
 module.exports = {
   verifyUserLoginToken,
   verifyAdminLoginToken,
+  verifyUserCheckoutToken,
   verifyUserBreakToken,
   verifyUserCheckinToken,
   verifyUserOvertimeToken,

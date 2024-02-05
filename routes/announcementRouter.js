@@ -9,10 +9,12 @@ const {
 
 const announcementRouter = Router();
 
+announcementRouter
+  .route("/:id")
+  .get(getAnnouncementById)
+  .patch(editAnnouncementById)
+  .delete(deleteAnnouncementById);
 announcementRouter.route("/").get(getAnnouncement);
 announcementRouter.route("/new").post(createNewAnnouncement);
-announcementRouter.route("/:id").get(getAnnouncementById);
-announcementRouter.route("/:id").patch(editAnnouncementById);
-announcementRouter.route("/:id").delete(deleteAnnouncementById);
 
 module.exports = announcementRouter;

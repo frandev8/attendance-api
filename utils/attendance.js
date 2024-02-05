@@ -27,8 +27,8 @@ async function markAbsent(employees) {
       const autoClockIn = new Date();
       const autoClockOut = new Date();
 
-      autoClockIn.setHours(10, 30, 0);
-      autoClockOut.setHours(17, 30, 0);
+      autoClockIn.setHours(10, 0, 0);
+      autoClockOut.setHours(17, 0, 0);
 
       const employee = await employeeDB.findById(employeeId).exec();
 
@@ -69,7 +69,7 @@ async function clockOutAttendance(attendance) {
 
     const clockOutDate = new Date();
 
-    clockOutDate.setHours(23, 40, 0, 0);
+    clockOutDate.setHours(17, 0, 0, 0);
     attendance.clockOutTime = clockOutDate;
     await attendance.save();
 
@@ -92,7 +92,7 @@ async function forceEndBreakAttendance(attendance) {
 
     const breakEndTime = new Date();
 
-    breakEndTime.setHours(23, 30, 0, 0);
+    breakEndTime.setHours(15, 0, 0, 0);
 
     attendance.breakEndTime = breakEndTime;
     await attendance.save();
@@ -116,7 +116,7 @@ async function forceEndOvertimeAttendance(attendance) {
 
     const overtimeEndTime = new Date();
 
-    overtimeEndTime.setHours(23, 50, 0, 0);
+    overtimeEndTime.setHours(19, 0, 0, 0);
     attendance.overtimeEndTime = overtimeEndTime;
     await attendance.save();
 
@@ -132,8 +132,18 @@ async function forceEndOvertimeAttendance(attendance) {
 }
 
 async function getNonClockOutAttendance() {
+  const today = new Date();
+
+  today.setHours(10, 0, 0, 0);
+
   const attendance = await attendanceDB
-    .find({ status: "pending", clockOutTime: null })
+    .find({
+      status: "pending",
+      clockInTime: {
+        $gte: today,
+      },
+      clockOutTime: null,
+    })
     .exec();
 
   if (!attendance.length) {
@@ -146,7 +156,7 @@ async function getNonClockOutAttendance() {
 async function getNonEndBreakAttendance() {
   const today = new Date();
 
-  today.setHours(23, 20, 0, 0);
+  today.setHours(14, 0, 0, 0);
 
   const attendance = await attendanceDB
     .find({
@@ -168,7 +178,7 @@ async function getNonEndBreakAttendance() {
 async function getNonEndOvertimeAttendance() {
   const today = new Date();
 
-  today.setHours(23, 45, 0, 0);
+  today.setHours(17, 0, 0, 0);
 
   const attendance = await attendanceDB
     .find({

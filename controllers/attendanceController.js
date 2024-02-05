@@ -87,6 +87,41 @@ const getClockOutAttendanceById = asyncHandler(async (req, res) => {
   res.status(200).json(clockOutAttendance);
 });
 
+const getAutoClockOutAttendanceById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const targetDate = new Date(); // Set the target date
+
+  // Clear the time components to focus on the date only
+  targetDate.setHours(0, 0, 0, 0);
+
+  const attendance = await attendanceDB
+    .find({
+      userId: id,
+      status: "pending",
+      clockInTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+      clockOutTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+    })
+    .limit(1)
+    .lean();
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  // const token = attendance[0].generateCheckOutAuthToken();
+
+  const response = { ...attendance[0], clockOutToken: "token" };
+
+  res.status(200).json(response);
+});
+
 /**
  * @desc Get attendance by id
  * @route Get/attendance
@@ -133,6 +168,7 @@ const getAttendanceByDate = asyncHandler(async (req, res) => {
 
   const { match: matchDate } = req.query;
 
+
   if (matchDate) {
     const targetDate = new Date(matchDate); // Set the target date
 
@@ -140,7 +176,7 @@ const getAttendanceByDate = asyncHandler(async (req, res) => {
     targetDate.setHours(0, 0, 0, 0);
 
     const attendance = await attendanceDB
-      .find({
+      .findOne({
         userId: id,
         clockInTime: {
           $gte: targetDate, // Greater than or equal to the target date (start of day)
@@ -149,7 +185,9 @@ const getAttendanceByDate = asyncHandler(async (req, res) => {
       })
       .lean();
 
-    if (!attendance.length) {
+    console.log(attendance, targetDate, "attendance by date");
+
+    if (!attendance) {
       return res.status(400).type("json").send({ msg: "No attendance found!" });
     }
 
@@ -257,11 +295,19 @@ const checkOut = asyncHandler(async (req, res) => {
     }
 
     attendance.clockOutTime = new Date(clockOutTime);
-    attendance.save();
+    await attendance.save();
+
+    const token = attendance.generateCheckOutAuthToken();
+
+    if (attendance.breakStartTime && !attendance.breakEndTime) {
+      attendance.breakEndTime = new Date(clockOutTime);
+      await attendance.save();
+    }
 
     res.status(200).json({
       msg: "clock out successful",
       clockOutTime: attendance.clockOutTime,
+      clockOutToken: token,
     });
   } catch (e) {
     console.log(e.message);
@@ -276,8 +322,6 @@ const checkOut = asyncHandler(async (req, res) => {
  */
 
 const startBreak = asyncHandler(async (req, res) => {
-  console.log("starting break!");
-
   try {
     const { id } = req.params;
     const { breakTime } = req.body;
@@ -354,6 +398,40 @@ const getWeeklyBreakByDate = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json(attendance);
+});
+
+const getAutoEndBreakAttendanceById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const targetDate = new Date(); // Set the target date
+
+  // Clear the time components to focus on the date only
+  targetDate.setHours(0, 0, 0, 0);
+
+  const attendance = await attendanceDB
+    .find({
+      userId: id,
+      status: "pending",
+      clockInTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+      breakStartTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+      breakEndTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+    })
+    .limit(1)
+    .lean();
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  res.status(200).json(attendance[0]);
 });
 
 /**
@@ -438,12 +516,50 @@ const getWeeklyOvertimeByDate = asyncHandler(async (req, res) => {
   res.status(200).json(attendance);
 });
 
+const getAutoEndOvertimeAttendanceById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const targetDate = new Date(); // Set the target date
+
+  // Clear the time components to focus on the date only
+  targetDate.setHours(0, 0, 0, 0);
+
+  const attendance = await attendanceDB
+    .find({
+      userId: id,
+      status: "pending",
+      clockInTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+      overtimeStartTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+      overtimeEndTime: {
+        $gte: targetDate, // Greater than or equal to the target date (start of day)
+        $lt: new Date(targetDate.getTime() + 86400000), // Less than the next day (end of day)
+      },
+    })
+    .limit(1)
+    .lean();
+
+  if (!attendance.length) {
+    return res.status(400).type("json").send({ msg: "No attendance found!" });
+  }
+
+  res.status(200).json(attendance[0]);
+});
+
 module.exports = {
   getAttendance,
   checkIn,
   getWeeklyBreakByDate,
+  getAutoEndOvertimeAttendanceById,
+  getAutoEndBreakAttendanceById,
   getWeeklyOvertimeByDate,
   checkOut,
+  getAutoClockOutAttendanceById,
   getClockOutAttendanceById,
   startBreak,
   getAttendanceByDate,
