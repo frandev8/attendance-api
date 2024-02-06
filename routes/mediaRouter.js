@@ -7,7 +7,6 @@ bannerRouter.route("/banner/:id").get(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-
     try {
       const avatar = await avatarDB.findById(id).exec();
 
@@ -25,7 +24,6 @@ bannerRouter.route("/banner/:id").get(
 bannerRouter.route("/logo/:id").get(
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-
 
     try {
       const avatar = await avatarDB.findById(id).exec();
