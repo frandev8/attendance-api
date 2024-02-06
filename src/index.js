@@ -37,6 +37,15 @@ connectDB();
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
+
+// Serve static files
+app.use(express.static(path.join(__dirname, "build")));
+
+// Handle all routes
+app.get("/*", function (req, res) {
+  res.sendFile(path.join(__dirname, "build", "index.html"));
+});
+
 app.use("/", require("../routes/root"));
 app.use("/media", require("../routes/mediaRouter"));
 
