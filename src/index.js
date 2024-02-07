@@ -38,13 +38,13 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-// Serve static files
-app.use(express.static(path.join(__dirname, "dist")));
+// // Serve static files
+// app.use(express.static(path.join(__dirname, "dist")));
 
-// Handle all routes
-app.get("/*", function (req, res) {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
-});
+// // Handle all routes
+// app.get("/*", function (req, res) {
+//   res.sendFile(path.join(__dirname, "dist", "index.html"));
+// });
 
 app.use("/", require("../routes/root"));
 app.use("/media", require("../routes/mediaRouter"));
