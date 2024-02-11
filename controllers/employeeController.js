@@ -33,7 +33,6 @@ const loginEmployee = asyncHandler(async (req, res) => {
     if (error) {
       return res.status(400).json({ msg: error.details[0].message });
     }
-
     const employee = await employeeDB.findOne({ username }).exec();
 
     if (!employee) {
@@ -263,7 +262,7 @@ const verifyEmployeeRegistration = asyncHandler(async (req, res) => {
   const { id, token, pin } = req.params;
 
   try {
-    const employee = await employeeDB.findById(id).lean();
+    const employee = await employeeDB.findById(id).exec();
 
     if (!token || !pin || !employee) {
       return res
@@ -283,11 +282,8 @@ const verifyEmployeeRegistration = asyncHandler(async (req, res) => {
         .send({ msg: "invalid link, try again" });
     }
 
-    // update activate
-    const verifiedEmployee = await employeeDB.findById(employee._id).exec();
-
-    verifiedEmployee.activate = true;
-    verifiedEmployee.save();
+    employee.activate = true;
+    await employee.save();
     // remove token
     await tokenDB.deleteOne({ owner: employee._id });
 

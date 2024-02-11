@@ -97,7 +97,6 @@ const createNewAdmin = asyncHandler(async (req, res) => {
         .type("json")
         .send({ msg: "email already exist, sign in instead." });
     }
-    console.log("no email duplication");
 
     duplicate = await adminDB.findOne({ username }).lean();
 
