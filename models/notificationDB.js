@@ -32,10 +32,8 @@ const notificationSchema = new mongoose.Schema({
 
 const notificationDB = mongoose.model("notification", notificationSchema);
 
-
 function isNotificationFormValid(data) {
   const schema = joi.object({
-    adminId: joi.string().required(),
     date: joi.date().required(),
     title: joi.string().required().not().empty(),
     message: joi.string().required().not().empty(),
@@ -52,4 +50,8 @@ function isEditNotificationFormValid(data) {
   return schema.validate(data);
 }
 
-module.exports = { notificationDB, isNotificationFormValid, isEditNotificationFormValid };
+module.exports = {
+  notificationDB,
+  isNotificationFormValid,
+  isEditNotificationFormValid,
+};

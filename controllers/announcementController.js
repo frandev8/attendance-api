@@ -36,9 +36,11 @@ const getAnnouncementById = asyncHandler(async (req, res) => {
  */
 const createNewAnnouncement = asyncHandler(async (req, res) => {
   const { title, message, date, adminId } = req.body;
+
+  console.log("called");
+
   try {
     const { error } = isAnnouncementFormValid({
-      adminId: "655772cfa78ba6376d4c7b32",
       title,
       date,
       message,
@@ -47,9 +49,10 @@ const createNewAnnouncement = asyncHandler(async (req, res) => {
       return res.status(404).json({ msg: error.details[0].message });
     }
 
+    console.log("bypass");
     // create new announcement
     const announcement = await announcementDB.create({
-      adminId: "655772cfa78ba6376d4c7b32",
+      adminId,
       title,
       date,
       message,

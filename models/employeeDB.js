@@ -64,15 +64,6 @@ employeeSchema.methods.generateAuthToken = function () {
 
 const employeeDB = mongoose.model("employee", employeeSchema);
 
-function loginValidate(data) {
-  const schema = joi.object({
-    username: joi.string().min(3).max(30).required().label("username"),
-    password: passwordComplexity(undefined, "password").required(),
-    role: joi.string().required().label("role").valid("employee"),
-  });
-  return schema.validate(data);
-}
-
 const passwordComplexityOptions = {
   min: 8,
   max: 20,
@@ -82,6 +73,18 @@ const passwordComplexityOptions = {
   symbols: undefined,
   requirementCount: 2,
 };
+
+function loginValidate(data) {
+  const schema = joi.object({
+    username: joi.string().min(3).max(30).required().label("username"),
+    password: passwordComplexity(
+      passwordComplexityOptions,
+      "password"
+    ).required(),
+    role: joi.string().required().label("role").valid("employee"),
+  });
+  return schema.validate(data);
+}
 
 function passwordValidate(data) {
   const schema = joi.object({

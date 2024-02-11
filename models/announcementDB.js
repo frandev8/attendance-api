@@ -29,10 +29,8 @@ const announcementSchema = new mongoose.Schema({
 
 const announcementDB = mongoose.model("announcement", announcementSchema);
 
-
 function isAnnouncementFormValid(data) {
   const schema = joi.object({
-    adminId: joi.string().required(),
     date: joi.date().required(),
     title: joi.string().required().not().empty(),
     message: joi.string().required().not().empty(),

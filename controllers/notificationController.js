@@ -35,9 +35,9 @@ const getNotificationById = asyncHandler(async (req, res) => {
  */
 const createNewNotification = asyncHandler(async (req, res) => {
   const { title, message, adminId, date } = req.body;
+
   try {
     const { error } = isNotificationFormValid({
-      adminId: "655772cfa78ba6376d4c7b32",
       title,
       date,
       message,
@@ -49,7 +49,7 @@ const createNewNotification = asyncHandler(async (req, res) => {
 
     // create new notification
     const notification = await notificationDB.create({
-      adminId: "655772cfa78ba6376d4c7b32",
+      adminId,
       title,
       date,
       message,

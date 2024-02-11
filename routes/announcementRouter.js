@@ -14,7 +14,6 @@ announcementRouter
   .get(getAnnouncementById)
   .patch(editAnnouncementById)
   .delete(deleteAnnouncementById);
-announcementRouter.route("/").get(getAnnouncement);
-announcementRouter.route("/new").post(createNewAnnouncement);
+announcementRouter.route("/").get(getAnnouncement).post(createNewAnnouncement);
 
 module.exports = announcementRouter;

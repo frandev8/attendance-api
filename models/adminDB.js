@@ -52,10 +52,23 @@ adminSchema.methods.generateAuthToken = function () {
 
 const adminDB = mongoose.model("admin", adminSchema);
 
+const passwordComplexityOptions = {
+  min: 8,
+  max: 20,
+  lowerCase: 1,
+  upperCase: 1,
+  numeric: 1,
+  symbols: undefined,
+  requirementCount: 2,
+};
+
 function loginValidate(data) {
   const schema = joi.object({
     username: joi.string().min(3).max(20).required().label("username"),
-    password: passwordComplexity(undefined, "password").required(),
+    password: passwordComplexity(
+      passwordComplexityOptions,
+      "password"
+    ).required(),
     role: joi.string().required().label("role").valid("admin"),
   });
 
@@ -73,7 +86,10 @@ function registerValidatePhase2(data) {
       })
       .label("email")
       .required(),
-    password: passwordComplexity(undefined, "password").required(),
+    password: passwordComplexity(
+      passwordComplexityOptions,
+      "password"
+    ).required(),
     firstname: joi.string().min(3).required().label("firstname"),
     lastname: joi.string().label("lastname"),
     phone: joi.string().required().min(9).max(14).label("phone"),
