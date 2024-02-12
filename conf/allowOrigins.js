@@ -4,6 +4,7 @@ const allowedOrigin = [
   "http://localhost:5173",
   "https://www.kasapa-media-bbhx.onrender.com/",
   "https://kasapa-media-bbhx.onrender.com",
+  "https://attendance-alpha-seven.vercel.app/",
   "https://kasapa-media-bbhx.onrender",
 ];
 

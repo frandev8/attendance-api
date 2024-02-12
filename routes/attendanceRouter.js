@@ -33,10 +33,10 @@ const attendanceRouter = Router();
 attendanceRouter.route("/").get(getAttendance);
 attendanceRouter.route("/:id").get(getAttendanceById);
 attendanceRouter.route("/date/:id").get(getAttendanceByDate);
-attendanceRouter
-  .route("/clock-in/:id")
-  .get(getClockInAttendance)
-  .post(validateClockInTime, checkIn);
+attendanceRouter.route("/clock-in/:id").get(getClockInAttendance).post(
+  // validateClockInTime,
+  checkIn
+);
 attendanceRouter
   .route("/auto/clock-out/:id")
   .get(getAutoClockOutAttendanceById);
@@ -55,14 +55,11 @@ attendanceRouter.route("/break/:id").get(getWeeklyBreakByDate).post(
 attendanceRouter
   .route("/auto/overtime/:id")
   .get(getAutoEndOvertimeAttendanceById);
-attendanceRouter
-  .route("/overtime/:id")
-  .get(getWeeklyOvertimeByDate)
-  .post(
-    validateOvertimeTime,
-    verifyUserCheckoutToken,
-    verifyUserOvertimeToken,
-    startOvertime
-  );
+attendanceRouter.route("/overtime/:id").get(getWeeklyOvertimeByDate).post(
+  // validateOvertimeTime,
+  verifyUserCheckoutToken,
+  verifyUserOvertimeToken,
+  startOvertime
+);
 
 module.exports = attendanceRouter;
